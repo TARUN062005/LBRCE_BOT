@@ -1,0 +1,32 @@
+{
+  "name": "lbrce-ai",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "LBRCE AI — retrieval-grounded assistant for Lakireddy Bali Reddy College of Engineering",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @lbrce/api\" \"npm run dev -w @lbrce/web\"",
+    "build": "npm run build -w @lbrce/shared && npm run build -w @lbrce/api && npm run build -w @lbrce/web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck -w @lbrce/shared && npm run typecheck -w @lbrce/api && npm run typecheck -w @lbrce/web",
+    "test": "npm run test -w @lbrce/shared && npm run test -w @lbrce/api && npm run test -w @lbrce/web",
+    "seed": "npm run seed -w @lbrce/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

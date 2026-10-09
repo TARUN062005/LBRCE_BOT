@@ -1,0 +1,81 @@
+/** Query examples shown in the UI. These are prompts, not stored college facts. */
+export const SUGGESTED_QUESTIONS = [
+  'What is LBRCE?',
+  'What programmes does LBRCE offer?',
+  'Who is the head of the CSE department?',
+  'Show the CSE department faculty details.',
+  'Show the timetable for CSE, second year, first semester, section A.',
+  'What is the examination schedule?',
+  'Find the latest examination circular.',
+  'Show the academic calendar.',
+  'What are the admission requirements?',
+  'What is the fee structure?',
+  'What placement statistics are officially published?',
+  'Show official photographs of the campus or laboratories.',
+] as const;
+
+export const OFFICIAL_SITE_URL = 'https://www.lbrce.ac.in/';
+
+/**
+ * Starting URLs discovered from the public LBRCE website navigation.
+ * The crawler must still fetch them; these are not cached page bodies.
+ */
+export const OFFICIAL_SEED_PATHS = [
+  '/',
+  '/academic_pages/timetables.php',
+  '/academic_pages/aycalender.php',
+  '/academic_pages/acadregulations.php',
+  '/academic_pages/course_structure.php',
+  '/admission_pages/courses.php',
+  '/admission_pages/admissions.php',
+  '/admission_pages/feestructure.php',
+  '/quicklinks_pages/faculty.php',
+  '/quicklinks_pages/contact.php',
+  '/examsection_pages/examnotific.php',
+  '/examsection_pages/examtables.php',
+  '/examsection_pages/examresults.php',
+  '/placements/index.php',
+  '/placements/stat2526.php',
+  '/gallery_pages/galleryindex.php',
+  '/cse/index.php',
+  '/cse/csetimetables.php',
+  '/cse/csefaculty.php',
+  '/ece/index.php',
+  '/ece/ecetimetables.php',
+  '/ece/ecefaculty.php',
+  '/eee/index.php',
+  '/eee/eeetimetables.php',
+  '/it/index.php',
+  '/it/ittimetables.php',
+  '/civil/index.php',
+  '/civil/civiltimetables.php',
+  '/mech/index.php',
+  '/mech/mechtimetables.php',
+  '/ase/index.php',
+  '/ase/asetimetables.php',
+  '/ai/index.php',
+  '/ai/aitimetables.php',
+  '/csm/index.php',
+  '/csm/csmtimetables.php',
+  '/csm/csmfaculty.php',
+  '/mba/index.php',
+  '/mba/mbatimetables.php',
+  '/studentcorner_pages/central_library.php',
+  '/studentcorner_pages/hostels.php',
+  '/administration_pages/principal.php',
+] as const;
+
+export const DOCUMENT_TYPES = [
+  'notice',
+  'timetable',
+  'circular',
+  'calendar',
+  'fee',
+  'syllabus',
+  'regulation',
+  'placement',
+  'faculty',
+  'other',
+] as const;
+
+export type DocumentType = (typeof DOCUMENT_TYPES)[number];

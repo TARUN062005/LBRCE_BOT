@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #142033;
+  background: #f4f7fb;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.prose-chat ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.prose-chat ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3 {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.prose-chat p,
+.prose-chat li {
+  margin-top: 0.35rem;
+}
+
+@media print {
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    display: block !important;
+  }
+}
