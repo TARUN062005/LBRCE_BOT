@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import rateLimit from 'express-rate-limit';
 import { ZodError, type ZodTypeAny } from 'zod';
-import { getEnv } from '../config/env.js';
+import { isAllowedOrigin } from '../config/env.js';
 import { readToken } from '../services/auth.service.js';
 import { HttpError } from '../utils/http-error.js';
 import { logger } from '../utils/logger.js';
@@ -18,7 +18,7 @@ export function requireOrigin(req: Request, _res: Response, next: NextFunction):
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const origin = req.get('origin');
   if (!origin) return next();
-  if (!getEnv().corsOrigins.includes(origin)) {
+  if (!isAllowedOrigin(origin)) {
     return next(new HttpError(403, 'FORBIDDEN_ORIGIN', 'Origin is not allowed'));
   }
   next();

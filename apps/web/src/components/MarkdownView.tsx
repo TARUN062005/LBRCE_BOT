@@ -2,10 +2,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import type { Components } from 'react-markdown';
+import { isCollegeUrl } from './Citations';
 
 const components: Components = {
   a({ href, children }) {
-    if (!href || !/^(https?:|mailto:)/i.test(href)) return <span>{children}</span>;
+    if (!href || !isCollegeUrl(href)) return <span>{children}</span>;
     return (
       <a href={href} target="_blank" rel="noreferrer" className="font-semibold text-brand underline">
         {children}

@@ -2,12 +2,17 @@ import { ExternalLink } from 'lucide-react';
 import type { Citation } from '@lbrce/shared';
 
 export function Citations({ citations }: { citations: Citation[] }) {
-  if (!citations.length) return null;
+  const unique = citations.filter((citation, index) => {
+    if (citation.url && !isCollegeUrl(citation.url)) return false;
+    const key = citation.url || citation.id;
+    return citations.findIndex((item) => (item.url || item.id) === key) === index;
+  });
+  if (!unique.length) return null;
   return (
     <div className="mt-4 border-t border-line pt-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">Official links</p>
       <ol className="mt-2 space-y-2">
-        {citations.map((citation) => (
+        {unique.map((citation) => (
           <li key={citation.id} className="rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink">
             {citation.url ? (
               <a href={safeUrl(citation.url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-brand">
@@ -37,6 +42,15 @@ export function Citations({ citations }: { citations: Citation[] }) {
   );
 }
 
+export function isCollegeUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === 'lbrce.ac.in' || host.endsWith('.lbrce.ac.in');
+  } catch {
+    return false;
+  }
+}
+
 function safeUrl(url: string): string {
-  return /^(https?:)/i.test(url) ? url : '#';
+  return isCollegeUrl(url) ? url : '#';
 }

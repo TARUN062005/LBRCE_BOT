@@ -37,6 +37,16 @@ import type { ParsedEntry } from '../timetable/parse.js';
 
 const USER_AGENT = 'LBRCE-AI-Bot/1.0';
 
+export async function ingestOfficialUrl(url: string): Promise<number> {
+  const source = await CollegeSource.findOne({ enabled: true }).sort({ createdAt: 1 });
+  if (!source) throw new Error('No enabled college source is configured');
+  const response = await fetchPublic(url, getEnv().allowedHosts);
+  if (response.status >= 400) throw new Error(`HTTP ${response.status} for ${url}`);
+  const extracted = extractHtmlPage(response.body.toString('utf8'), response.url);
+  await storePage(source.id, response.url, response, source.allowAiInput !== false);
+  return extracted.students.length;
+}
+
 export async function enqueueCrawl(): Promise<string> {
   const source = await CollegeSource.findOne({ enabled: true }).sort({ createdAt: 1 });
   if (!source) throw new Error('No enabled college source is configured');
@@ -176,9 +186,14 @@ async function storePage(
   const contentHash = sha256(extracted.text);
   const existing = await CrawledPage.findOne({ url });
   if (existing && existing.contentHash === contentHash) {
-    existing.retrievedAt = new Date();
-    await existing.save();
-    return { links: extracted.links, images: 0 };
+    const studentChunks = extracted.students.length
+      ? await DocumentChunk.countDocuments({ pageId: existing._id, 'metadata.documentType': 'student' })
+      : 1;
+    if (studentChunks > 0) {
+      existing.retrievedAt = new Date();
+      await existing.save();
+      return { links: extracted.links, images: 0 };
+    }
   }
   const page = await CrawledPage.findOneAndUpdate(
     { url },
@@ -215,8 +230,32 @@ async function storePage(
     allowAiInput,
     retrievedAt: new Date(),
   }));
+  for (let index = 0; index < extracted.students.length; index += 12) {
+    const text = extracted.students
+      .slice(index, index + 12)
+      .map((student) => `${student.name} | Registration number: ${student.registrationNumber}`)
+      .join('\n');
+    chunks.push({
+      pageId: page._id,
+      sourceUrl: url,
+      title: extracted.title,
+      text: `Student registration list\n${text}`,
+      heading: 'Student registration list',
+      pageNumber: undefined,
+      chunkIndex: chunks.length,
+      contentHash: sha256(text),
+      metadata: { department, documentType: 'student' },
+      verificationStatus: 'unverified',
+      published: true,
+      allowAiInput,
+      retrievedAt: new Date(),
+    });
+  }
   if (chunks.length) await DocumentChunk.insertMany(chunks);
-  await embedChunks(chunks.map((chunk) => chunk.contentHash), { pageId: page._id });
+  await embedChunks(
+    chunks.filter((chunk) => chunk.metadata.documentType !== 'student').map((chunk) => chunk.contentHash),
+    { pageId: page._id },
+  );
 
   let imageCount = 0;
   for (const image of extracted.images) {

@@ -4,7 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import multer from 'multer';
 import mongoose from 'mongoose';
-import { getEnv } from './config/env.js';
+import { getEnv, isAllowedOrigin } from './config/env.js';
 import {
   adminDocument,
   adminDocuments,
@@ -65,7 +65,9 @@ export function createApp() {
   );
   app.use(
     cors({
-      origin: env.corsOrigins,
+      origin(origin, callback) {
+        callback(null, isAllowedOrigin(origin) ? origin ?? true : false);
+      },
       credentials: true,
     }),
   );

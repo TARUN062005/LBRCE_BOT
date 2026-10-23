@@ -1,14 +1,41 @@
-import { generatedNarrativeSchema } from '@lbrce/shared';
+import { DEPARTMENT_MATCHERS, generatedNarrativeSchema, matchDepartment } from '@lbrce/shared';
 import { getEnv } from '../config/env.js';
 import { getProvider } from '../integrations/gemini/provider.js';
 import { buildEvidencePrompt, NARRATIVE_JSON_SCHEMA, STREAM_SYSTEM_PROMPT, SYSTEM_PROMPT } from '../integrations/gemini/prompt.js';
 import { CollegeImage, DocumentChunk, Faculty, Timetable, TimetableEntry } from '../models/index.js';
-import type { FacultyRow, ImageHit, NarrativeDraft } from './assemble.js';
+import type { FacultyResolution, FacultyRow, ImageHit, NarrativeDraft } from './assemble.js';
+import {
+  FULL_FACULTY_LIST,
+  departmentFromReply,
+  departmentQuestion,
+  personQuestion,
+  personTokens,
+  wantsFullFacultyList,
+  type FacultyPlan,
+} from './faculty-guide.js';
 import { documentTypeForIntent, type IntentType, type QueryEntities } from './intent.js';
 import { cosineSimilarity, mergeChunkHits, rankChunks, type ScoredChunk } from './rank.js';
 import type { StoredTimetable } from '../timetable/resolve.js';
 import { logger } from '../utils/logger.js';
 import { ProviderError } from '../utils/http-error.js';
+
+export async function lookupNamedRecords(tokens: string[]): Promise<ScoredChunk[]> {
+  if (!tokens.length) return [];
+  const rows = await DocumentChunk.find({
+    published: true,
+    $and: tokens.map((token) => ({ text: new RegExp(`\\b${escapeRegex(token)}\\b`, 'i') })),
+  })
+    .limit(6)
+    .lean();
+  return rows.map((row) => {
+    const chunk = toChunk(row, 5, 0);
+    const lines = chunk.text
+      .split('\n')
+      .filter((line) => tokens.every((token) => line.toUpperCase().includes(token)));
+    if (lines.length) chunk.text = `Student registration list\n${lines.join('\n')}`;
+    return chunk;
+  });
+}
 
 export async function searchKnowledge(query: string, intent: IntentType, entities: QueryEntities) {
   const department = entities.department;
@@ -144,13 +171,148 @@ async function facultySearch(query: string, department?: string): Promise<Facult
   if (department) filter.department = department;
   if (/\b(head|hod)\b/i.test(query)) filter.isHead = true;
   const rows = await Faculty.find(filter).limit(100).lean();
-  return rows.map((row) => ({
+  return rows.map((row) => toFacultyRow(row)).filter((person) => !/^department of\b/i.test(person.name));
+}
+
+export async function resolveFacultyRequest(plan: FacultyPlan, message: string): Promise<FacultyResolution> {
+  if (plan.action === 'ask-department') return askForDepartment();
+  if (plan.action === 'continue-department') {
+    const department = (await departmentFromListedOption(message)) ?? departmentFromReply(message);
+    if (!department) return askForDepartment();
+    return askForPerson(department.code, department.name);
+  }
+  if (plan.action === 'ask-person') return askForPerson(plan.departmentCode, plan.departmentName);
+  if (plan.action === 'continue-person') return personFromReply(message, plan.departmentCode, plan.departmentName);
+  if (plan.action === 'named') return personByTokens(plan.tokens, plan.departmentCode);
+  const people = await loadFaculty({ department: plan.departmentCode, headsOnly: plan.headsOnly });
+  if (plan.headsOnly && people.length === 1) return { status: 'detail', person: people[0]! };
+  return { status: 'list', people };
+}
+
+async function askForDepartment(): Promise<FacultyResolution> {
+  const options = await facultyDepartmentOptions();
+  if (!options.length) {
+    return { status: 'clarify', question: 'No faculty departments are stored yet, so I cannot open a record.', options: [] };
+  }
+  return { status: 'clarify', question: departmentQuestion(), options };
+}
+
+async function askForPerson(departmentCode: string, departmentName: string): Promise<FacultyResolution> {
+  const people = await loadFaculty({ department: departmentCode });
+  if (!people.length) {
+    const options = await facultyDepartmentOptions();
+    return {
+      status: 'clarify',
+      question: `No faculty are stored for ${departmentName}. Which department do you want faculty details for?`,
+      options,
+    };
+  }
+  if (people.length === 1) return { status: 'detail', person: people[0]! };
+  return {
+    status: 'clarify',
+    question: personQuestion(departmentName, departmentCode),
+    options: [...people.slice(0, 48).map((person) => person.name), FULL_FACULTY_LIST],
+  };
+}
+
+async function personFromReply(message: string, departmentCode: string, departmentName: string): Promise<FacultyResolution> {
+  if (wantsFullFacultyList(message)) return { status: 'list', people: await loadFaculty({ department: departmentCode }) };
+  const people = await loadFaculty({ department: departmentCode });
+  const exact = people.filter((person) => person.name.toLowerCase() === message.trim().toLowerCase());
+  const tokens = personTokens(message);
+  const matched = exact.length ? exact : people.filter((person) => tokens.length > 0 && tokens.every((token) => person.name.toLowerCase().includes(token)));
+  if (matched.length === 1) return { status: 'detail', person: matched[0]! };
+  if (matched.length > 1) {
+    return {
+      status: 'clarify',
+      question: personQuestion(departmentName, departmentCode),
+      options: [...matched.slice(0, 48).map((person) => person.name), FULL_FACULTY_LIST],
+    };
+  }
+  return {
+    status: 'clarify',
+    question: `I could not find that name in ${departmentName}. ${personQuestion(departmentName, departmentCode)}`,
+    options: [...people.slice(0, 48).map((person) => person.name), FULL_FACULTY_LIST],
+  };
+}
+
+async function personByTokens(tokens: string[], departmentCode?: string): Promise<FacultyResolution> {
+  const people = await loadFaculty({ department: departmentCode, nameTokens: tokens });
+  if (people.length === 1) return { status: 'detail', person: people[0]! };
+  if (people.length > 1) {
+    const codes = [...new Set(people.map((person) => person.department).filter((department): department is string => Boolean(department)))];
+    const only = codes.length === 1 ? codes[0] : undefined;
+    if (only) {
+      const known = matchDepartment(only);
+      return {
+        status: 'clarify',
+        question: personQuestion(known?.name ?? only, known?.code ?? only),
+        options: [...people.slice(0, 48).map((person) => person.name), FULL_FACULTY_LIST],
+      };
+    }
+    return askForDepartment();
+  }
+  if (!departmentCode) return askForDepartment();
+  return askForPerson(departmentCode, matchDepartment(departmentCode)?.name ?? departmentCode);
+}
+
+async function facultyDepartmentOptions(): Promise<string[]> {
+  const codes = (await Faculty.distinct('department', { verificationStatus: { $ne: 'rejected' }, department: { $nin: [null, ''] } }))
+    .map((code) => String(code).trim())
+    .filter(Boolean);
+  const labels = new Map<string, string>();
+  for (const code of codes) {
+    const matcher = DEPARTMENT_MATCHERS.find((item) => item.code === code) ?? matcherForStoredDepartment(code);
+    const key = matcher?.code ?? code;
+    if (!labels.has(key)) labels.set(key, matcher ? `${matcher.name} — ${matcher.code}` : code);
+  }
+  return [...labels.values()].sort((left, right) => left.localeCompare(right));
+}
+
+function matcherForStoredDepartment(value: string): { code: string; name: string } | undefined {
+  return matchDepartment(value);
+}
+
+async function departmentFromListedOption(message: string): Promise<{ code: string; name: string } | undefined> {
+  const options = await facultyDepartmentOptions();
+  const exact = options.find((option) => option.toLowerCase() === message.trim().toLowerCase());
+  if (!exact) return undefined;
+  const parts = exact.split(' — ');
+  const code = parts.length > 1 ? parts[parts.length - 1]!.trim() : exact;
+  const name = parts.length > 1 ? parts.slice(0, -1).join(' — ').trim() : exact;
+  return { code, name };
+}
+
+async function storedDepartmentCodes(code: string): Promise<string[]> {
+  const stored = (await Faculty.distinct('department', { verificationStatus: { $ne: 'rejected' } })).map((value) => String(value ?? '').trim()).filter(Boolean);
+  const matches = stored.filter((value) => value === code || matchDepartment(value)?.code === code);
+  return matches.length ? matches : [code];
+}
+
+async function loadFaculty(filter: { department?: string; headsOnly?: boolean; nameTokens?: string[] }): Promise<FacultyRow[]> {
+  const query: Record<string, unknown> = { verificationStatus: { $ne: 'rejected' } };
+  if (filter.department) query.department = { $in: await storedDepartmentCodes(filter.department) };
+  if (filter.headsOnly) query.isHead = true;
+  if (filter.nameTokens?.length) query.$and = filter.nameTokens.map((token) => ({ name: new RegExp(escapeRegex(token), 'i') }));
+  const rows = await Faculty.find(query)
+    .sort({ isHead: -1, name: 1 })
+    .limit(filter.department || filter.nameTokens?.length ? 250 : 40)
+    .lean();
+  return rows.map((row) => toFacultyRow(row)).filter((person) => !/^department of\b/i.test(person.name));
+}
+
+function toFacultyRow(row: any): FacultyRow {
+  const status = row.verificationStatus;
+  return {
     name: row.name,
-    designation: row.designation ?? undefined,
-    department: row.department ?? undefined,
-    sourceUrl: row.sourceUrl,
-    verificationStatus: row.verificationStatus,
-  }));
+    designation: row.designation || undefined,
+    department: row.department || undefined,
+    email: row.email || undefined,
+    profileUrl: row.profileUrl || undefined,
+    isHead: Boolean(row.isHead),
+    sourceUrl: row.sourceUrl || undefined,
+    verificationStatus: status === 'verified' || status === 'unverified' || status === 'rejected' ? status : 'unknown',
+  };
 }
 
 async function timetableSearch(entities: QueryEntities): Promise<StoredTimetable[]> {

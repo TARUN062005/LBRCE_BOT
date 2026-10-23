@@ -13,11 +13,11 @@ export async function ensureSeed(): Promise<void> {
         crawlDelayMs: env.CRAWL_DELAY_MS,
         maxPages: env.CRAWL_MAX_PAGES,
         maxDocuments: env.CRAWL_MAX_DOCUMENTS,
+        seedPaths: [...OFFICIAL_SEED_PATHS],
       },
       $setOnInsert: {
         name: 'LBRCE official website',
         baseUrl: OFFICIAL_SITE_URL,
-        seedPaths: [...OFFICIAL_SEED_PATHS],
         enabled: true,
         allowAiInput: true,
         health: 'unknown',

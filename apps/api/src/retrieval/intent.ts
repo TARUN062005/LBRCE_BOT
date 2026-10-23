@@ -46,7 +46,7 @@ export function detectIntent(message: string): { type: IntentType; wantsImages: 
   if (/\b(timetable|time table|schedule for|today's class|todays class)\b/.test(text)) return { type: 'timetable', wantsImages };
   if (/\b(hod|head of|faculty|professor|staff)\b/.test(text)) return { type: 'faculty', wantsImages };
   if (/\b(department|programme|program|courses offered|what departments)\b/.test(text)) return { type: 'department', wantsImages };
-  if (/\b(academic calendar|calendar)\b/.test(text)) return { type: 'calendar', wantsImages };
+  if (/\b(academic\s+cal[ae]nd[ae]r|cal[ae]nd[ae]r|sankranthi|sankranti|pongal|holidays?)\b/.test(text)) return { type: 'calendar', wantsImages };
   if (/\b(exam|examination|results announcement|circular)\b/.test(text)) return { type: 'examination', wantsImages };
   if (/\b(admission|eapcet|icet|eligibility)\b/.test(text)) return { type: 'admission', wantsImages };
   if (/\b(fee|tuition)\b/.test(text)) return { type: 'fee', wantsImages };

@@ -1,5 +1,5 @@
 import type { Citation, TimetableEntryView } from '@lbrce/shared';
-import { Citations } from './Citations';
+import { Citations, isCollegeUrl } from './Citations';
 import { DataTable } from './DataTable';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -65,7 +65,7 @@ export function TimetableView({
       {imageUrl ? (
         <figure className="space-y-2">
           <img src={imageUrl} alt={title} className="max-h-[480px] w-full rounded-lg border border-line object-contain" />
-          {sourceUrl ? (
+          {sourceUrl && isCollegeUrl(sourceUrl) ? (
             <figcaption className="text-sm">
               <a className="text-brand" href={sourceUrl} target="_blank" rel="noreferrer">
                 Open the official source

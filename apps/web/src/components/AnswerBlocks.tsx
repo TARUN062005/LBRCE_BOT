@@ -5,17 +5,17 @@ import { ImageGallery } from './ImageGallery';
 import { MarkdownView } from './MarkdownView';
 import { TimetableView } from './TimetableView';
 
-export function AnswerBlocks({ blocks }: { blocks: AnswerBlock[] }) {
+export function AnswerBlocks({ blocks, onChoose }: { blocks: AnswerBlock[]; onChoose?: (option: string) => void }) {
   return (
     <div className="space-y-4">
       {blocks.map((block, index) => (
-        <Block key={`${block.type}-${index}`} block={block} />
+        <Block key={`${block.type}-${index}`} block={block} onChoose={onChoose} />
       ))}
     </div>
   );
 }
 
-function Block({ block }: { block: AnswerBlock }) {
+function Block({ block, onChoose }: { block: AnswerBlock; onChoose?: (option: string) => void }) {
   if (block.type === 'text' || block.type === 'document_summary') {
     return (
       <div>
@@ -54,13 +54,24 @@ function Block({ block }: { block: AnswerBlock }) {
   }
   if (block.type === 'clarification') {
     return (
-      <div className="rounded-lg border border-brand/20 bg-brand-light p-3">
-        <p className="font-semibold">{block.question}</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-          {block.options.map((option) => (
-            <li key={option}>{option}</li>
-          ))}
-        </ul>
+      <div className="rounded-2xl border border-brand/20 bg-brand-light p-4">
+        <p className="font-semibold text-ink">{block.question}</p>
+        <p className="mt-1 text-sm text-muted">Choose one. The next reply uses that choice.</p>
+        {block.options.length ? (
+          <div className="mt-3 flex max-h-72 flex-wrap gap-2 overflow-y-auto">
+            {block.options.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className="rounded-full border border-line bg-white px-3 py-1.5 text-left text-sm text-ink shadow-card hover:border-brand disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!onChoose}
+                onClick={() => onChoose?.(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   }

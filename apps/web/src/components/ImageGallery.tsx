@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isCollegeUrl } from './Citations';
 
 export interface GalleryImage {
   id: string;
@@ -25,7 +26,7 @@ export function ImageGallery({ title, images }: { title?: string; images: Galler
             {broken[image.id] ? (
               <div className="flex h-36 items-center p-3 text-sm text-muted">
                 This image could not be embedded.
-                {image.pageUrl ? (
+                {image.pageUrl && isCollegeUrl(image.pageUrl) ? (
                   <a className="ml-1 text-brand" href={image.pageUrl} target="_blank" rel="noreferrer">
                     Open the official page
                   </a>
@@ -37,7 +38,7 @@ export function ImageGallery({ title, images }: { title?: string; images: Galler
                   src={image.url}
                   alt={image.alt || image.title || 'Official college image'}
                   loading="lazy"
-                  className="h-36 w-full object-cover"
+                  className="h-48 w-full object-cover"
                   onError={() => setBroken((current) => ({ ...current, [image.id]: true }))}
                 />
               </button>
@@ -46,9 +47,9 @@ export function ImageGallery({ title, images }: { title?: string; images: Galler
               <div className="font-semibold text-ink">{image.title || image.alt || 'Untitled image'}</div>
               {image.caption ? <div>{image.caption}</div> : null}
               {image.topic ? <div className="uppercase tracking-wide">{image.topic}</div> : null}
-              {image.pageUrl ? (
+              {image.pageUrl && isCollegeUrl(image.pageUrl) ? (
                 <a href={image.pageUrl} target="_blank" rel="noreferrer" className="text-brand">
-                  Source page
+                  Official page
                 </a>
               ) : null}
             </figcaption>

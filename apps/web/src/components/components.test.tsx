@@ -64,7 +64,7 @@ describe('structured rendering', () => {
       />,
     );
     expect(screen.getByText('From the homepage')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Source page' })).toHaveAttribute('href', 'https://www.lbrce.ac.in/');
+    expect(screen.getByRole('link', { name: 'Official page' })).toHaveAttribute('href', 'https://www.lbrce.ac.in/');
   });
 
   it('renders clickable citations', () => {

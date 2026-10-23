@@ -18,11 +18,17 @@ export interface ExtractedImage {
   context: string;
 }
 
+export interface ExtractedStudent {
+  name: string;
+  registrationNumber: string;
+}
+
 export interface ExtractedPage {
   title: string;
   headings: string[];
   text: string;
   tables: ExtractedTable[];
+  students: ExtractedStudent[];
   images: ExtractedImage[];
   links: string[];
 }
@@ -54,7 +60,10 @@ export function extractHtmlPage(html: string, pageUrl: string): ExtractedPage {
         if (cells.some(Boolean)) rows.push(cells);
       });
     if (rows.length < 2) return;
-    tables.push({ headers: rows[0] ?? [], rows: rows.slice(1, 400) });
+    const headerIndex = rows.findIndex((row) => isStudentHeader(row.join(' ')));
+    const start = headerIndex >= 0 ? headerIndex : 0;
+    const rowLimit = headerIndex >= 0 ? 800 : 400;
+    tables.push({ headers: rows[start] ?? [], rows: rows.slice(start + 1, start + 1 + rowLimit) });
   });
 
   const images: ExtractedImage[] = [];
@@ -108,6 +117,7 @@ export function extractHtmlPage(html: string, pageUrl: string): ExtractedPage {
       headers: table.headers.map(redactSensitive),
       rows: table.rows.map((row) => row.map(redactSensitive)),
     })),
+    students: studentsFromTables(tables),
     images: [...timetableImages.slice(0, 250), ...otherImages.slice(0, 30)],
     links: [...links],
   };
@@ -120,7 +130,7 @@ export function facultyFromTables(tables: ExtractedTable[], sourceUrl: string, f
     const nameIndex = headers.findIndex((header) => /name/.test(header));
     const roleIndex = headers.findIndex((header) => /designation|qualification|position/.test(header));
     const deptIndex = headers.findIndex((header) => /department/.test(header));
-    if (nameIndex < 0) continue;
+    if (nameIndex < 0 || roleIndex < 0) continue;
     for (const row of table.rows) {
       const name = clean(row[nameIndex] ?? '');
       if (!name || name.length < 3 || /name/i.test(name)) continue;
@@ -136,6 +146,32 @@ export function facultyFromTables(tables: ExtractedTable[], sourceUrl: string, f
       });
     }
     if (people.length) break;
+  }
+  return people;
+}
+
+function isRegistrationHeader(value: string): boolean {
+  return /regd|reg\.|registration|\broll\b|h\.\s*t\.|hall\s*ticket/.test(value.toLowerCase());
+}
+
+function isStudentHeader(value: string): boolean {
+  const line = value.toLowerCase();
+  return /name/.test(line) && isRegistrationHeader(line);
+}
+
+export function studentsFromTables(tables: ExtractedTable[]): ExtractedStudent[] {
+  const people: ExtractedStudent[] = [];
+  for (const table of tables) {
+    const headers = table.headers.map((header) => header.toLowerCase());
+    const nameIndex = headers.findIndex((header) => /name/.test(header));
+    const registrationIndex = headers.findIndex((header) => isRegistrationHeader(header));
+    if (nameIndex < 0 || registrationIndex < 0) continue;
+    for (const row of table.rows) {
+      const name = clean(row[nameIndex] ?? '');
+      const registrationNumber = clean(row[registrationIndex] ?? '');
+      if (name.length < 3 || !registrationNumber || /name of the student|regd/i.test(name)) continue;
+      people.push({ name, registrationNumber });
+    }
   }
   return people;
 }

@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -63,6 +65,36 @@ export function getEnv(): Env {
   return cached;
 }
 
+export function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  const env = getEnv();
+  if (env.corsOrigins.includes(origin)) return true;
+  return env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1):517\d$/.test(origin);
+}
+
 export function resetEnvForTests(): void {
   cached = undefined;
+  geminiKeyCache = undefined;
+}
+
+let geminiKeyCache: { file: string; mtimeMs: number; value: string } | undefined;
+
+/** Prefer the key currently saved in `.env`, so a replaced key is used without reprinting it. */
+export function readGeminiApiKey(): string {
+  const files = [path.resolve(process.cwd(), '.env'), path.resolve(process.cwd(), 'apps/api/.env')];
+  for (const file of files) {
+    try {
+      const stat = fs.statSync(file);
+      if (geminiKeyCache?.file === file && geminiKeyCache.mtimeMs === stat.mtimeMs) return geminiKeyCache.value;
+      const text = fs.readFileSync(file, 'utf8');
+      const match = text.match(/^GEMINI_API_KEY\s*=\s*(.*)$/m);
+      const value = (match?.[1] ?? '').trim().replace(/^['"]|['"]$/g, '');
+      if (!value) continue;
+      geminiKeyCache = { file, mtimeMs: stat.mtimeMs, value };
+      return value;
+    } catch {
+      continue;
+    }
+  }
+  return process.env.GEMINI_API_KEY?.trim() ?? '';
 }

@@ -5,7 +5,6 @@ import { Sidebar } from './components/Sidebar';
 import { getSessionId } from './lib/session';
 import { AdminHome, DocumentsAdmin, IngestionAdmin, LoginPage, RetrievalAdmin, TimetableAdmin } from './pages/AdminPages';
 import { ChatPage } from './pages/ChatPage';
-import { FacultyPage, NoticesPage, SettingsPage, TimetablePage } from './pages/ResourcePages';
 
 export function App() {
   return (
@@ -48,7 +47,7 @@ function StudentShell() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas lg:flex">
+    <div className="h-dvh overflow-hidden bg-canvas lg:flex">
       <Sidebar
         open={open}
         onClose={() => setOpen((current) => !current)}
@@ -57,21 +56,26 @@ function StudentShell() {
         onAsk={(question) => openFreshChat(question)}
         onSelect={(id) => {
           setConversationId(id);
+          setDraftSeed('');
+          setChatKey((current) => current + 1);
           setOpen(false);
           navigate('/');
         }}
+        onDelete={(id) => {
+          void api(`/api/chat/${id}?sessionId=${getSessionId()}`, { method: 'DELETE' })
+            .then(() => {
+              setConversations((current) => current.filter((conversation) => conversation.id !== id));
+              if (conversationId === id) openFreshChat();
+            })
+            .catch(() => undefined);
+        }}
       />
-      <main className="min-w-0 flex-1">
+      <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <Routes>
           <Route
             path="/"
             element={<ChatPage key={chatKey} conversationId={conversationId} initialDraft={draftSeed} onConversation={setConversationId} />}
           />
-          <Route path="/timetable" element={<TimetablePage />} />
-          <Route path="/calendar" element={<NoticesPage documentType="calendar" title="Academic calendar" description="Published academic calendar documents from the index." />} />
-          <Route path="/faculty" element={<FacultyPage />} />
-          <Route path="/notices" element={<NoticesPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
