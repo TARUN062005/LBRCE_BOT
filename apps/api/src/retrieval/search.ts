@@ -13,8 +13,12 @@ import {
   wantsFullFacultyList,
   type FacultyPlan,
 } from './faculty-guide.js';
-import { documentTypeForIntent, type IntentType, type QueryEntities } from './intent.js';
+import { documentTypeForIntent, topicPattern, type IntentType, type QueryEntities } from './intent.js';
 import { cosineSimilarity, mergeChunkHits, rankChunks, type ScoredChunk } from './rank.js';
+import { isNavigationText } from './grounding.js';
+import { cachedNarrative, evidenceKey, storeNarrative } from './answer-cache.js';
+import { imageHaystack, imageRecordIsPublic, imageTopic, isDecorativeImageUrl } from './images.js';
+import { designationMatchesFamily, isInstitutionalDesignation, requestedRoleFamily } from './roles.js';
 import type { StoredTimetable } from '../timetable/resolve.js';
 import { logger } from '../utils/logger.js';
 import { ProviderError } from '../utils/http-error.js';
@@ -23,6 +27,7 @@ export async function lookupNamedRecords(tokens: string[]): Promise<ScoredChunk[
   if (!tokens.length) return [];
   const rows = await DocumentChunk.find({
     published: true,
+    'metadata.documentType': 'student',
     $and: tokens.map((token) => ({ text: new RegExp(`\\b${escapeRegex(token)}\\b`, 'i') })),
   })
     .limit(6)
@@ -32,23 +37,30 @@ export async function lookupNamedRecords(tokens: string[]): Promise<ScoredChunk[
     const lines = chunk.text
       .split('\n')
       .filter((line) => tokens.every((token) => line.toUpperCase().includes(token)));
-    if (lines.length) chunk.text = `Student registration list\n${lines.join('\n')}`;
+    if (!lines.length) return undefined;
+    const kept = lines.filter((line) => line.length < 200).slice(0, 3);
+    if (!kept.length) return undefined;
+    chunk.text = `Student registration list\n${kept.join('\n')}`;
     return chunk;
-  });
+  }).filter((chunk): chunk is ScoredChunk => Boolean(chunk));
 }
 
 export async function searchKnowledge(query: string, intent: IntentType, entities: QueryEntities) {
   const department = entities.department;
   const documentType = documentTypeForIntent(intent);
-  const [lexical, semantic, faculty, timetables, images] = await Promise.all([
-    lexicalSearch(query, department, documentType),
-    semanticSearch(query, department, documentType),
+  const [lexical, semantic, topics, faculty, timetables, images] = await Promise.all([
+    lexicalSearch(query, department, documentType, intent),
+    semanticSearch(query, department, documentType, intent),
+    topicSearch(intent),
     intent === 'faculty' ? facultySearch(query, department) : Promise.resolve([]),
     intent === 'timetable' ? timetableSearch(entities) : Promise.resolve([]),
     imageSearch(query, intent),
   ]);
   return {
-    chunks: rankChunks(mergeChunkHits([lexical, semantic])),
+    chunks: preferIntentUrls(
+      rankChunks(mergeChunkHits([lexical, semantic, topics])).filter((chunk) => !isNavigationText(`${chunk.title} ${chunk.text}`)),
+      intent,
+    ),
     faculty,
     timetables,
     images,
@@ -62,6 +74,10 @@ export async function generateNarrative(
 ): Promise<NarrativeDraft | null> {
   const usable = chunks.filter((chunk) => chunk.verificationStatus !== 'rejected').slice(0, 6);
   if (!usable.length) return null;
+  const remembered = cachedNarrative(question, evidenceKey(usable));
+  if (remembered) {
+    return { markdown: remembered, citationIds: usable.map((chunk) => chunk.id), relatedQuestions: [], confidence: 'inferred' };
+  }
   const provider = getProvider();
   if (!provider.isConfigured()) return null;
   if (usable.every((chunk) => chunkAllowsAi(chunk) === false)) return null;
@@ -73,6 +89,7 @@ export async function generateNarrative(
   });
   const parsed = generatedNarrativeSchema.safeParse(parseJson(raw));
   if (!parsed.success) throw new ProviderError('BAD_RESPONSE', 'The model returned malformed JSON');
+  storeNarrative(question, evidenceKey(usable), parsed.data.markdown);
   return parsed.data;
 }
 
@@ -83,6 +100,11 @@ export async function streamNarrative(
   signal?: AbortSignal,
 ): Promise<string> {
   const usable = chunks.filter((chunk) => chunkAllowsAi(chunk) !== false).slice(0, 6);
+  const remembered = cachedNarrative(question, evidenceKey(usable));
+  if (remembered) {
+    onToken(remembered);
+    return remembered;
+  }
   const provider = getProvider();
   if (!provider.isConfigured() || !usable.length) return '';
   let text = '';
@@ -94,17 +116,17 @@ export async function streamNarrative(
     text += token;
     onToken(token);
   }
+  storeNarrative(question, evidenceKey(usable), text);
   return text;
 }
 
-async function lexicalSearch(query: string, department?: string, documentType?: string): Promise<ScoredChunk[]> {
-  const filter: Record<string, unknown> = { published: true, $text: { $search: query } };
+async function lexicalSearch(query: string, department: string | undefined, documentType: string | undefined, intent: IntentType): Promise<ScoredChunk[]> {
+  const filter: Record<string, unknown> = { published: true, $text: { $search: query }, ...visibilityFilter(documentType, intent) };
   if (department) filter['metadata.department'] = department;
-  if (documentType) filter['metadata.documentType'] = documentType;
   try {
     const rows = await DocumentChunk.find(filter, { score: { $meta: 'textScore' } })
       .sort({ score: { $meta: 'textScore' } })
-      .limit(40)
+      .limit(12)
       .lean();
     return rows.map((row) => toChunk(row, Number(row.score ?? 0), 0));
   } catch (error) {
@@ -112,6 +134,7 @@ async function lexicalSearch(query: string, department?: string, documentType?: 
     const loose: Record<string, unknown> = {
       published: true,
       text: new RegExp(escapeRegex(query).slice(0, 80), 'i'),
+      ...visibilityFilter(documentType, intent),
     };
     if (department) loose['metadata.department'] = department;
     const rows = await DocumentChunk.find(loose).limit(40).lean();
@@ -119,7 +142,39 @@ async function lexicalSearch(query: string, department?: string, documentType?: 
   }
 }
 
-async function semanticSearch(query: string, department?: string, documentType?: string): Promise<ScoredChunk[]> {
+function preferIntentUrls(chunks: ScoredChunk[], intent: IntentType): ScoredChunk[] {
+  const hint =
+    intent === 'fee'
+      ? /feestructure/i
+      : intent === 'hostel'
+        ? /hostels\.php/i
+        : intent === 'examination'
+          ? /examtable|examnotific/i
+          : undefined;
+  if (!hint) return chunks;
+  return [...chunks].sort((left, right) => Number(hint.test(right.url ?? '')) - Number(hint.test(left.url ?? '')));
+}
+
+async function topicSearch(intent: IntentType): Promise<ScoredChunk[]> {
+  const pattern = topicPattern(intent);
+  if (!pattern) return [];
+  const rows = await DocumentChunk.find({
+    published: true,
+    'metadata.documentType': { $ne: 'student' },
+    text: pattern,
+  })
+    .limit(8)
+    .lean();
+  return rows.map((row) => toChunk(row, 3, 0));
+}
+
+function visibilityFilter(documentType: string | undefined, intent: IntentType): Record<string, unknown> {
+  if (documentType) return { 'metadata.documentType': documentType };
+  if (intent === 'examination') return { 'metadata.documentType': { $nin: ['student', 'timetable'] } };
+  return { 'metadata.documentType': { $ne: 'student' } };
+}
+
+async function semanticSearch(query: string, department: string | undefined, documentType: string | undefined, intent: IntentType): Promise<ScoredChunk[]> {
   const provider = getProvider();
   if (!provider.isConfigured()) return [];
   let vector: number[] = [];
@@ -146,7 +201,7 @@ async function semanticSearch(query: string, department?: string, documentType?:
         },
       ]);
       const hits = rows
-        .filter((row) => matchesMeta(row, department, documentType))
+        .filter((row) => matchesMeta(row, department, documentType, intent))
         .map((row) => toChunk(row, 0, Number(row.score ?? 0.5)));
       if (hits.length) return hits;
       logger.warn('vector search returned no rows, using cosine fallback');
@@ -154,16 +209,32 @@ async function semanticSearch(query: string, department?: string, documentType?:
       logger.warn({ err: error instanceof Error ? error.message : 'vector search failed' }, 'using cosine fallback');
     }
   }
-  const filter: Record<string, unknown> = { published: true, embeddingModel: { $exists: true } };
+  const filter: Record<string, unknown> = { published: true, embeddingModel: { $exists: true }, ...visibilityFilter(documentType, intent) };
   if (department) filter['metadata.department'] = department;
-  if (documentType) filter['metadata.documentType'] = documentType;
   const rows = await DocumentChunk.find(filter)
     .select('+embedding title text sourceUrl pageNumber section heading verificationStatus metadata retrievedAt allowAiInput')
-    .limit(250)
+    .limit(80)
     .lean();
   return rows
     .map((row) => toChunk(row, 0, cosineSimilarity(vector, row.embedding ?? [])))
     .filter((chunk) => chunk.semanticScore >= 0.35);
+}
+
+export async function findRoleHolders(message: string): Promise<FacultyRow[]> {
+  const family = requestedRoleFamily(message);
+  if (!family && !/\b(training\s*(?:and|&)\s*placement|t\s*&\s*p|tp\s*cell|placement)\b/i.test(message)) return [];
+  const rows = await Faculty.find({
+    verificationStatus: { $ne: 'rejected' },
+    designation: /training|placement|t\s*&\s*p|tp\s*cell|dean|head/i,
+  })
+    .limit(40)
+    .lean();
+  return rows
+    .map((row) => toFacultyRow(row))
+    .filter((person) => {
+      const designation = person.designation ?? '';
+      return family ? designationMatchesFamily(designation, family) : isInstitutionalDesignation(designation);
+    });
 }
 
 async function facultySearch(query: string, department?: string): Promise<FacultyRow[]> {
@@ -171,7 +242,7 @@ async function facultySearch(query: string, department?: string): Promise<Facult
   if (department) filter.department = department;
   if (/\b(head|hod)\b/i.test(query)) filter.isHead = true;
   const rows = await Faculty.find(filter).limit(100).lean();
-  return rows.map((row) => toFacultyRow(row)).filter((person) => !/^department of\b/i.test(person.name));
+  return rows.map((row) => toFacultyRow(row)).filter((person) => isPersonName(person.name));
 }
 
 export async function resolveFacultyRequest(plan: FacultyPlan, message: string): Promise<FacultyResolution> {
@@ -298,7 +369,11 @@ async function loadFaculty(filter: { department?: string; headsOnly?: boolean; n
     .sort({ isHead: -1, name: 1 })
     .limit(filter.department || filter.nameTokens?.length ? 250 : 40)
     .lean();
-  return rows.map((row) => toFacultyRow(row)).filter((person) => !/^department of\b/i.test(person.name));
+  return rows.map((row) => toFacultyRow(row)).filter((person) => isPersonName(person.name));
+}
+
+function isPersonName(name: string): boolean {
+  return !/^department of\b/i.test(name) && !/\b(hostel|canteen)\b/i.test(name);
 }
 
 function toFacultyRow(row: any): FacultyRow {
@@ -359,7 +434,7 @@ async function timetableSearch(entities: QueryEntities): Promise<StoredTimetable
 }
 
 async function imageSearch(query: string, intent: IntentType): Promise<ImageHit[]> {
-  if (intent !== 'image' && intent !== 'timetable' && !/\b(photo|image|picture|gallery)\b/i.test(query)) return [];
+  if (intent !== 'image' && !/\b(photo|photograph|picture|image|gallery|laboratory|laboratories|campus)s?\b/i.test(query)) return [];
   let rows: any[] = [];
   try {
     rows = await CollegeImage.find({ $text: { $search: query } }, { score: { $meta: 'textScore' } })
@@ -372,14 +447,28 @@ async function imageSearch(query: string, intent: IntentType): Promise<ImageHit[
   const tokens = query
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((token) => token.length > 2 && !['the', 'show', 'official', 'photographs', 'photos', 'image', 'images'].includes(token));
+    .filter((token) => token.length > 2 && !['the', 'show', 'official', 'photographs', 'photos', 'image', 'images', 'picture', 'pictures'].includes(token));
+  const names = /\b(faculty|professor|hod|dr)\b/i.test(query) ? personTokens(query) : [];
+  const department = matchDepartment(query);
+  const seen = new Set<string>();
   return rows
+    .filter((row) => imageRecordIsPublic(row))
     .map((row) => {
-      const haystack = `${row.title ?? ''} ${row.alt ?? ''} ${row.caption ?? ''} ${row.context ?? ''} ${row.topic ?? ''}`.toLowerCase();
+      const haystack = imageHaystack(row);
       const score = tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0);
-      return { row, score };
+      return { row, score, haystack };
     })
-    .filter((item) => item.score > 0 || intent === 'timetable')
+    .filter((item) => {
+      if (isDecorativeImageUrl(String(item.row.sourceUrl || ''))) return false;
+      if (item.score <= 0 && intent !== 'image') return false;
+      if (intent === 'image' && !/gallery/i.test(`${item.row.sourceUrl ?? ''} ${item.row.pageUrl ?? ''}`)) return false;
+      if (names.length && !names.every((token) => item.haystack.includes(token))) return false;
+      if (department && !item.haystack.includes(department.code.toLowerCase()) && !item.haystack.includes(department.name.toLowerCase())) return false;
+      const url = String(item.row.sourceUrl || item.row._id);
+      if (seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    })
     .slice(0, 8)
     .map(({ row }) => ({
       id: String(row._id),
@@ -388,7 +477,7 @@ async function imageSearch(query: string, intent: IntentType): Promise<ImageHit[
       title: row.title,
       alt: row.alt,
       caption: row.caption,
-      topic: row.topic,
+      topic: row.topic || imageTopic(row.sourceUrl),
     }));
 }
 
@@ -411,7 +500,14 @@ function toChunk(row: Record<string, any>, lexicalScore: number, semanticScore: 
   };
 }
 
-function matchesMeta(row: { metadata?: { department?: string; documentType?: string } }, department?: string, documentType?: string) {
+function matchesMeta(
+  row: { metadata?: { department?: string; documentType?: string } },
+  department: string | undefined,
+  documentType: string | undefined,
+  intent: IntentType,
+) {
+  if (row.metadata?.documentType === 'student') return false;
+  if (intent === 'examination' && row.metadata?.documentType === 'timetable') return false;
   if (department && row.metadata?.department && row.metadata.department !== department) return false;
   if (documentType && row.metadata?.documentType && row.metadata.documentType !== documentType) return false;
   return true;

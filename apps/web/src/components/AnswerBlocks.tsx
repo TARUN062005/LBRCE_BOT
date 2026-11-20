@@ -1,31 +1,50 @@
 import type { AnswerBlock } from '@lbrce/shared';
-import { Citations } from './Citations';
+import { Citations, isCollegeUrl } from './Citations';
 import { DataTable } from './DataTable';
 import { ImageGallery } from './ImageGallery';
 import { MarkdownView } from './MarkdownView';
 import { TimetableView } from './TimetableView';
 
-export function AnswerBlocks({ blocks, onChoose }: { blocks: AnswerBlock[]; onChoose?: (option: string) => void }) {
+export function AnswerBlocks({
+  blocks,
+  onChoose,
+  showSources = false,
+}: {
+  blocks: AnswerBlock[];
+  onChoose?: (option: string) => void;
+  showSources?: boolean;
+}) {
   return (
     <div className="space-y-4">
       {blocks.map((block, index) => (
-        <Block key={`${block.type}-${index}`} block={block} onChoose={onChoose} />
+        <Block key={`${block.type}-${index}`} block={block} onChoose={onChoose} showSources={showSources} />
       ))}
     </div>
   );
 }
 
-function Block({ block, onChoose }: { block: AnswerBlock; onChoose?: (option: string) => void }) {
-  if (block.type === 'text' || block.type === 'document_summary') {
+function Block({ block, onChoose, showSources }: { block: AnswerBlock; onChoose?: (option: string) => void; showSources: boolean }) {
+  if (block.type === 'document_summary') {
+    const pdf = Boolean(block.documentUrl && /\.pdf(?:$|\?)/i.test(block.documentUrl) && isCollegeUrl(block.documentUrl));
     return (
       <div>
-        <MarkdownView markdown={block.markdown} />
-        <Citations citations={block.citations} />
+        <MarkdownView markdown={block.markdown} showSources={showSources} />
+        {pdf && block.documentUrl ? (
+          <iframe title={block.title} src={documentFrameSrc(block.documentUrl)} className="mt-3 h-[72vh] w-full rounded-2xl bg-white" />
+        ) : null}
+      </div>
+    );
+  }
+  if (block.type === 'text') {
+    return (
+      <div>
+        <MarkdownView markdown={block.markdown} showSources={showSources} />
+        {showSources ? <Citations citations={block.citations} /> : null}
       </div>
     );
   }
   if (block.type === 'table') {
-    return <DataTable title={block.title} columns={block.columns} rows={block.rows} citations={block.citations} />;
+    return <DataTable title={block.title} columns={block.columns} rows={block.rows} citations={showSources ? block.citations : []} />;
   }
   if (block.type === 'timetable') {
     return (
@@ -35,16 +54,19 @@ function Block({ block, onChoose }: { block: AnswerBlock; onChoose?: (option: st
         entries={block.entries}
         note={block.note}
         imageUrl={block.imageUrl}
-        sourceUrl={block.citations[0]?.url}
-        effectiveFrom={block.effectiveFrom}
-        verificationStatus={block.verificationStatus}
         day={block.day}
+        academicYear={block.academicYear}
+        department={block.department}
+        semester={block.semester}
+        section={block.section}
         citations={block.citations}
+        showSources={showSources}
       />
     );
   }
-  if (block.type === 'image_gallery') return <ImageGallery title={block.title} images={block.images} />;
+  if (block.type === 'image_gallery') return <ImageGallery images={block.images} />;
   if (block.type === 'source_list') {
+    if (!showSources) return null;
     return (
       <div>
         {block.title ? <h3 className="font-semibold">{block.title}</h3> : null}
@@ -54,16 +76,15 @@ function Block({ block, onChoose }: { block: AnswerBlock; onChoose?: (option: st
   }
   if (block.type === 'clarification') {
     return (
-      <div className="rounded-2xl border border-brand/20 bg-brand-light p-4">
-        <p className="font-semibold text-ink">{block.question}</p>
-        <p className="mt-1 text-sm text-muted">Choose one. The next reply uses that choice.</p>
+      <div>
+        <p className="text-[15px] leading-7">{block.question}</p>
         {block.options.length ? (
-          <div className="mt-3 flex max-h-72 flex-wrap gap-2 overflow-y-auto">
+          <div className="mt-3 flex flex-wrap gap-2">
             {block.options.map((option) => (
               <button
                 key={option}
                 type="button"
-                className="rounded-full border border-line bg-white px-3 py-1.5 text-left text-sm text-ink shadow-card hover:border-brand disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-line bg-white px-3 py-1.5 text-left text-sm hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!onChoose}
                 onClick={() => onChoose?.(option)}
               >
@@ -75,16 +96,15 @@ function Block({ block, onChoose }: { block: AnswerBlock; onChoose?: (option: st
       </div>
     );
   }
+  if (block.type === 'evidence') return null;
   return (
-    <div className="rounded-lg border border-dashed border-line bg-canvas p-3 text-sm">
-      <p>{block.message}</p>
-      {block.suggestions.length ? (
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
-          {block.suggestions.map((suggestion) => (
-            <li key={suggestion}>{suggestion}</li>
-          ))}
-        </ul>
-      ) : null}
+    <div>
+      <p className="text-[15px] leading-7">{block.message}</p>
     </div>
   );
+}
+
+function documentFrameSrc(url: string): string {
+  const name = decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'document.pdf').replace(/[^a-zA-Z0-9._-]/g, '') || 'document.pdf';
+  return `/api/media/${encodeURIComponent(name)}?url=${encodeURIComponent(url)}`;
 }

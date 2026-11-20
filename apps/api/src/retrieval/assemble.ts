@@ -2,6 +2,7 @@ import type { AnswerBlock, Citation } from '@lbrce/shared';
 import type { IntentType } from './intent.js';
 import type { ScoredChunk } from './rank.js';
 import { citationsFromChunks, excerptMarkdown, keepKnownCitations } from './citations.js';
+import { answerAdmitsGap, cleanAnswerText, usableCollegeUrl } from './grounding.js';
 import type { TimetableResolution } from '../timetable/resolve.js';
 
 export interface FacultyRow {
@@ -12,13 +13,14 @@ export interface FacultyRow {
   profileUrl?: string;
   isHead?: boolean;
   sourceUrl?: string;
+  listedOn?: string;
   verificationStatus: 'verified' | 'unverified' | 'rejected' | 'unknown';
 }
 
 export type FacultyResolution =
   | { status: 'clarify'; question: string; options: string[] }
-  | { status: 'detail'; person: FacultyRow }
-  | { status: 'list'; people: FacultyRow[] };
+  | { status: 'detail'; person: FacultyRow; note?: string }
+  | { status: 'list'; people: FacultyRow[]; note?: string };
 
 export interface ImageHit {
   id: string;
@@ -48,7 +50,15 @@ export function assembleBlocks(input: {
   providerNote?: string;
   externalCitations?: Citation[];
   narrativeFromWeb?: boolean;
+  directMessage?: string;
 }): { blocks: AnswerBlock[]; relatedQuestions: string[] } {
+  if (input.directMessage) {
+    return {
+      blocks: [{ type: 'text', markdown: cleanAnswerText(input.directMessage), citations: [] }],
+      relatedQuestions: [],
+    };
+  }
+
   if (input.resolution?.status === 'clarify') {
     return {
       blocks: [
@@ -122,8 +132,12 @@ export function assembleBlocks(input: {
   }
 
   if (input.facultyResolution?.status === 'detail') {
+    if (input.facultyResolution.note) blocks.push({ type: 'text', markdown: input.facultyResolution.note, citations: [] });
     blocks.push(...facultyDetail(input.facultyResolution.person));
-  } else if (input.intent === 'faculty' && input.faculty && input.faculty.length > 0) {
+  } else if (input.facultyResolution?.status === 'list' && input.facultyResolution.note) {
+    blocks.push({ type: 'text', markdown: input.facultyResolution.note, citations: [] });
+  }
+  if (input.facultyResolution?.status !== 'detail' && input.intent === 'faculty' && input.faculty && input.faculty.length > 0) {
     blocks.push({
       type: 'table',
       title: 'Faculty records retrieved from indexed sources',
@@ -139,12 +153,13 @@ export function assembleBlocks(input: {
     });
   }
 
-  if (input.images.length) {
+  const pictures = input.images.filter((image) => collegeUrl(image.url));
+  if (pictures.length) {
     blocks.push({
       type: 'image_gallery',
       title: 'Images from official pages',
-      images: input.images.map((image) => ({ ...image, pageUrl: collegeUrl(image.pageUrl) })),
-      citations: input.images.map((image) => ({
+      images: pictures.map((image) => ({ ...image, url: collegeUrl(image.url) ?? image.url, pageUrl: collegeUrl(image.pageUrl) })),
+      citations: pictures.map((image) => ({
         id: image.id,
         title: image.title || image.alt || 'Official image',
         url: collegeUrl(image.pageUrl) ?? collegeUrl(image.url),
@@ -192,12 +207,20 @@ function groundedNarrative(
   fromWeb?: boolean,
 ): { markdown: string; citations: Citation[]; relatedQuestions: string[] } | undefined {
   if (!narrative || narrative.confidence === 'insufficient' || !narrative.markdown.trim()) return undefined;
+  const markdown = cleanAnswerText(stripExternalLinks(narrative.markdown));
+  if (answerAdmitsGap(markdown)) {
+    return {
+      markdown: markdown.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '$1'),
+      citations: [],
+      relatedQuestions: [],
+    };
+  }
   const pool = fromWeb ? [...(externalCitations ?? []), ...citations] : citations;
   const kept = keepKnownCitations(narrative.citationIds, pool);
   if (!fromWeb && !kept.length) return undefined;
   const attached = (kept.length ? kept : (externalCitations ?? [])).filter((citation) => !citation.url || collegeUrl(citation.url));
   return {
-    markdown: stripExternalLinks(narrative.markdown),
+    markdown,
     citations: attached,
     relatedQuestions: narrative.relatedQuestions.filter((item) => item.trim().length > 0).slice(0, 3),
   };
@@ -205,15 +228,20 @@ function groundedNarrative(
 
 function facultyDetail(person: FacultyRow): AnswerBlock[] {
   const profile = collegeUrl(person.profileUrl);
-  const role = person.isHead ? 'Head of the department' : 'Faculty member';
+  const source = collegeUrl(person.sourceUrl);
+  const departmentHead = /\bhead of (?:the )?department\b|\bhod\b/i.test(person.designation ?? '');
+  const role = departmentHead ? 'Head of the department' : person.designation || (person.isHead ? 'Head of the department' : 'Faculty member');
   const rows = [
     ['Name', person.name],
-    ['Designation', person.designation || 'Not listed on the official page'],
+    ['Exact designation', person.designation || 'Not listed on the official page'],
     ['Department', person.department || 'Not listed'],
-    ['Role', role],
+    ['Role shown', role],
+    ['Date printed on the row', person.listedOn || 'Not published'],
+    ['Last verified by the college', 'Not published on this record'],
   ];
   if (person.email) rows.push(['Email', person.email]);
-  const summary = [`**${person.name}** is listed as ${person.designation || 'faculty'} in ${person.department || 'the college'}.`, `Role: ${role}.`];
+  const summary = [`**${person.name}** is listed as ${person.designation || 'faculty'}${person.department ? ` in ${person.department}` : ''}.`, `The designation above is copied from the official record. It is not inferred from another title.`];
+  if (source) summary.push(`[Official source](${source})`);
   if (profile) summary.push(`[Official profile](${profile})`);
   return [
     { type: 'text', markdown: summary.join('\n\n'), citations: [] },
@@ -247,13 +275,7 @@ function facultyCitations(rows: FacultyRow[]): Citation[] {
 }
 
 function collegeUrl(url: string | undefined): string | undefined {
-  if (!url) return undefined;
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return host === 'lbrce.ac.in' || host.endsWith('.lbrce.ac.in') ? url : undefined;
-  } catch {
-    return undefined;
-  }
+  return usableCollegeUrl(url);
 }
 
 function officialCitation(citation: Citation): Citation {

@@ -16,6 +16,9 @@ const schema = z.object({
   GEMINI_MODEL: z.string().min(1).default('gemini-3.5-flash'),
   GEMINI_EMBEDDING_MODEL: z.string().min(1).default('gemini-embedding-001'),
   GEMINI_EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(768),
+  BHARATCODE_API_KEY: z.string().optional().default(''),
+  BHARATCODE_MODEL: z.string().min(1).default('qwen-3.8-27b'),
+  BHARATCODE_BASE_URL: z.string().default('https://bharatcode.ai/api/model/v1'),
   VECTOR_SEARCH_INDEX: z.string().optional().default(''),
   ADMIN_EMAIL: z.string().email().default('admin@lbrce.local'),
   ADMIN_PASSWORD: z.string().optional().default(''),
@@ -74,27 +77,38 @@ export function isAllowedOrigin(origin: string | undefined): boolean {
 
 export function resetEnvForTests(): void {
   cached = undefined;
-  geminiKeyCache = undefined;
+  fileValueCache.clear();
 }
 
-let geminiKeyCache: { file: string; mtimeMs: number; value: string } | undefined;
+const fileValueCache = new Map<string, { mtimeMs: number; value: string }>();
 
-/** Prefer the key currently saved in `.env`, so a replaced key is used without reprinting it. */
-export function readGeminiApiKey(): string {
+/** Prefer the value currently saved in `.env`, so a replaced key is used without reprinting it. */
+export function readEnvFileValue(name: string): string {
+  const pattern = new RegExp(`^${name}\\s*=\\s*(.*)$`, 'm');
   const files = [path.resolve(process.cwd(), '.env'), path.resolve(process.cwd(), 'apps/api/.env')];
   for (const file of files) {
     try {
       const stat = fs.statSync(file);
-      if (geminiKeyCache?.file === file && geminiKeyCache.mtimeMs === stat.mtimeMs) return geminiKeyCache.value;
+      const cacheKey = `${file}:${name}`;
+      const cachedValue = fileValueCache.get(cacheKey);
+      if (cachedValue && cachedValue.mtimeMs === stat.mtimeMs) return cachedValue.value;
       const text = fs.readFileSync(file, 'utf8');
-      const match = text.match(/^GEMINI_API_KEY\s*=\s*(.*)$/m);
+      const match = text.match(pattern);
       const value = (match?.[1] ?? '').trim().replace(/^['"]|['"]$/g, '');
       if (!value) continue;
-      geminiKeyCache = { file, mtimeMs: stat.mtimeMs, value };
+      fileValueCache.set(cacheKey, { mtimeMs: stat.mtimeMs, value });
       return value;
     } catch {
       continue;
     }
   }
-  return process.env.GEMINI_API_KEY?.trim() ?? '';
+  return process.env[name]?.trim() ?? '';
+}
+
+export function readGeminiApiKey(): string {
+  return readEnvFileValue('GEMINI_API_KEY');
+}
+
+export function readBharatcodeApiKey(): string {
+  return readEnvFileValue('BHARATCODE_API_KEY');
 }

@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "typecheck": "npm run typecheck -w @lbrce/shared && npm run typecheck -w @lbrce/api && npm run typecheck -w @lbrce/web",
     "test": "npm run test -w @lbrce/shared && npm run test -w @lbrce/api && npm run test -w @lbrce/web",
-    "seed": "npm run seed -w @lbrce/api"
+    "seed": "npm run seed -w @lbrce/api",
+    "dev:agent": "python -m uvicorn app.main:app --app-dir apps/agent --host 127.0.0.1 --port 4100"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

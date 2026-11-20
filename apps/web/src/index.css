@@ -29,6 +29,24 @@ select {
   padding-left: 1.25rem;
 }
 
+.prose-chat table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.prose-chat th,
+.prose-chat td {
+  border: 1px solid #d7e0ea;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose-chat th {
+  background: #f4f7fb;
+}
+
 .prose-chat h1,
 .prose-chat h2,
 .prose-chat h3 {

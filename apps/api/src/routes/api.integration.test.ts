@@ -55,6 +55,15 @@ describe('API integration', () => {
     expect(dashboard.body.sources[0].baseUrl).toBe('https://www.lbrce.ac.in/');
   });
 
+  it('requires the browser session cookie and ignores a session id in the query', async () => {
+    await request(app).get('/api/chat/history?sessionId=session-123456').expect(401);
+    const agent = request.agent(app);
+    await agent.post('/api/session').send({ sessionId: 'session-abcdef' }).expect(200);
+    const history = await agent.get('/api/chat/history');
+    expect(history.status).toBe(200);
+    expect(history.body.data).toEqual([]);
+  });
+
   it('validates chat input and refuses an unsupported college fact', async () => {
     await request(app).post('/api/chat').send({ message: '', sessionId: 'session-123456' }).expect(400);
     const response = await request(app).post('/api/chat').send({

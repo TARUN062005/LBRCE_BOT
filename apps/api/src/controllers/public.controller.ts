@@ -2,21 +2,32 @@ import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { chatRequestSchema, feedbackRequestSchema, paginationQuerySchema, timetableSearchQuerySchema } from '@lbrce/shared';
 import { CrawledPage, CollegeImage, Document, Feedback, Message, Timetable, TimetableEntry } from '../models/index.js';
-import { answerQuestion, deleteConversation, getConversationMessages, listConversations } from '../services/chat.service.js';
+import { answerQuestion, deleteConversation, getConversationMessages, listConversations, renameConversation } from '../services/chat.service.js';
 import { detectIntent, extractEntities } from '../retrieval/intent.js';
 import { searchKnowledge } from '../retrieval/search.js';
+import { bindSession, readSessionCookie } from '../security/session.js';
 import { HttpError } from '../utils/http-error.js';
 import { isoDateInKolkata } from '../utils/time.js';
 import { resolveTimetableQuery } from '../timetable/resolve.js';
+import { fetchPublic } from '../integrations/college-sources/fetch.js';
+import { assertPublicUrl } from '../security/ssrf.js';
+
+export async function openSession(req: Request, res: Response): Promise<void> {
+  const presented = typeof req.body?.sessionId === 'string' ? req.body.sessionId : undefined;
+  bindSession(req, res, presented);
+  res.json({ ok: true });
+}
 
 export async function postChat(req: Request, res: Response): Promise<void> {
   const body = chatRequestSchema.parse(req.body);
-  const result = await answerQuestion(body);
+  const sessionId = bindSession(req, res, body.sessionId);
+  const result = await answerQuestion({ ...body, sessionId });
   res.status(200).json(result);
 }
 
 export async function streamChat(req: Request, res: Response): Promise<void> {
   const body = chatRequestSchema.parse(req.body);
+  const sessionId = bindSession(req, res, body.sessionId);
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
@@ -30,6 +41,7 @@ export async function streamChat(req: Request, res: Response): Promise<void> {
   try {
     const result = await answerQuestion({
       ...body,
+      sessionId,
       signal: controller.signal,
       onStatus: (status) => send('status', { status }),
       onToken: (token) => send('token', { token }),
@@ -43,9 +55,17 @@ export async function streamChat(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function renameChat(req: Request, res: Response): Promise<void> {
+  const sessionId = readSessionCookie(req);
+  if (!sessionId) throw new HttpError(401, 'UNAUTHENTICATED', 'Open a chat session first');
+  const title = typeof req.body?.title === 'string' ? req.body.title : '';
+  const conversation = (await renameConversation(param(req), sessionId, title)) as { _id: unknown; title: string } | null;
+  if (!conversation) throw new HttpError(404, 'NOT_FOUND', 'That conversation was not found');
+  res.json({ id: String(conversation._id), title: conversation.title });
+}
+
 export async function chatHistory(req: Request, res: Response): Promise<void> {
-  const sessionId = String(req.query.sessionId ?? '');
-  if (sessionId.length < 8) throw new HttpError(400, 'VALIDATION_ERROR', 'sessionId is required');
+  const sessionId = browserSession(req);
   const rows = await listConversations(sessionId);
   res.json({
     data: rows.map((row) => ({ id: String(row._id), title: row.title, updatedAt: row.updatedAt })),
@@ -53,8 +73,7 @@ export async function chatHistory(req: Request, res: Response): Promise<void> {
 }
 
 export async function chatById(req: Request, res: Response): Promise<void> {
-  const sessionId = String(req.query.sessionId ?? '');
-  const result = await getConversationMessages(param(req), sessionId);
+  const result = await getConversationMessages(param(req), browserSession(req));
   if (!result) throw new HttpError(404, 'NOT_FOUND', 'Conversation not found');
   res.json({
     conversation: { id: String(result.conversation._id), title: result.conversation.title },
@@ -70,8 +89,7 @@ export async function chatById(req: Request, res: Response): Promise<void> {
 }
 
 export async function removeChat(req: Request, res: Response): Promise<void> {
-  const sessionId = String(req.query.sessionId ?? '');
-  const removed = await deleteConversation(param(req), sessionId);
+  const removed = await deleteConversation(param(req), browserSession(req));
   if (!removed) throw new HttpError(404, 'NOT_FOUND', 'Conversation not found');
   res.status(204).end();
 }
@@ -106,7 +124,7 @@ export async function sourceById(req: Request, res: Response): Promise<void> {
     Message.findById(id).lean(),
   ])) as any[];
   if (page) {
-    res.json({ type: 'webpage', id, title: page.title, url: page.url, retrievedAt: page.retrievedAt, text: page.text.slice(0, 5000) });
+    res.json({ type: 'webpage', id, title: page.title, url: page.url, retrievedAt: page.retrievedAt, text: redactRoster(String(page.text ?? '')).slice(0, 5000) });
     return;
   }
   if (document) {
@@ -193,6 +211,31 @@ export async function timetableById(req: Request, res: Response): Promise<void> 
   res.json({ ...timetable, id: String(timetable._id), entries });
 }
 
+export async function downloadOfficialImage(req: Request, res: Response): Promise<void> {
+  const raw = String(req.query.url ?? '');
+  let url: URL;
+  try {
+    url = await assertPublicUrl(raw, ['lbrce.ac.in']);
+  } catch {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'Only an official LBRCE image can be downloaded');
+  }
+  const pdf = /\.pdf$/i.test(url.pathname);
+  const image = /\.(?:jpe?g|png|webp|gif)$/i.test(url.pathname);
+  if (url.hostname.toLowerCase() === 'erp.lbrce.ac.in' || (!pdf && !image)) {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'Only an official LBRCE image or PDF can be opened');
+  }
+  const response = await fetchPublic(url.toString(), ['lbrce.ac.in'], { maxBytes: 16 * 1024 * 1024 });
+  const type = response.contentType.toLowerCase();
+  const allowed = pdf ? type.includes('pdf') : type.startsWith('image/');
+  if (response.status >= 400 || !allowed) {
+    throw new HttpError(404, 'NOT_FOUND', 'The official file could not be opened');
+  }
+  const name = decodeURIComponent(url.pathname.split('/').pop() || 'lbrce-file').replace(/[^a-zA-Z0-9._-]/g, '');
+  res.setHeader('Content-Type', type.split(';')[0] || 'application/octet-stream');
+  res.setHeader('Content-Disposition', `${pdf ? 'inline' : 'attachment'}; filename="${name || 'lbrce-file'}"`);
+  res.send(response.body);
+}
+
 export async function searchImages(req: Request, res: Response): Promise<void> {
   const query = String(req.query.q ?? '').trim();
   if (!query) throw new HttpError(400, 'VALIDATION_ERROR', 'q is required');
@@ -223,6 +266,19 @@ function presentDocument(document: { _id: unknown; title: string; sourceUrl?: st
     createdAt: document.createdAt,
     preview: document.preview,
   };
+}
+
+function browserSession(req: Request): string {
+  const sessionId = readSessionCookie(req);
+  if (!sessionId) throw new HttpError(401, 'UNAUTHORIZED', 'A browser session is required');
+  return sessionId;
+}
+
+function redactRoster(text: string): string {
+  return text
+    .split('\n')
+    .filter((line) => !/\b\d{5}[A-Z]\d{2}[A-Z0-9]{2}\b/.test(line))
+    .join('\n');
 }
 
 function param(req: Request): string {

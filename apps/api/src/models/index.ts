@@ -218,6 +218,12 @@ const collegeImageSchema = new Schema(
     caption: String,
     context: String,
     topic: { type: String, index: true },
+    department: String,
+    academicYear: String,
+    documentId: { type: Schema.Types.ObjectId, ref: 'Document' },
+    pageNumber: Number,
+    ocrText: String,
+    description: String,
     contentHash: String,
     host: String,
   },
@@ -262,6 +268,19 @@ const auditLogSchema = new Schema(
 );
 auditLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 180 });
 
+const agentRunSchema = new Schema(
+  {
+    query: { type: String, required: true },
+    intent: String,
+    tools: { type: [String], default: [] },
+    provider: String,
+    durationMs: Number,
+    failure: String,
+  },
+  { timestamps: true },
+);
+agentRunSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 });
+
 function register(name: string, schema: Schema): mongoose.Model<any> {
   return (mongoose.models[name] as mongoose.Model<any> | undefined) ?? mongoose.model(name, schema);
 }
@@ -281,5 +300,6 @@ export const CollegeImage = register('CollegeImage', collegeImageSchema);
 export const IngestionJob = register('IngestionJob', ingestionJobSchema);
 export const Feedback = register('Feedback', feedbackSchema);
 export const AuditLog = register('AuditLog', auditLogSchema);
+export const AgentRun = register('AgentRun', agentRunSchema);
 
 export type UserDocument = InferSchemaType<typeof userSchema> & { _id: mongoose.Types.ObjectId };

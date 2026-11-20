@@ -16,6 +16,7 @@ import {
   extractSpreadsheet,
   facultyFromTables,
   ocrImage,
+  ocrPdf,
   timetableEntriesFromText,
 } from '../ingestion/extract.js';
 import {
@@ -392,6 +393,8 @@ export async function ingestUpload(input: {
 }
 
 export async function publishExtractedDocument(id: string, publish: boolean): Promise<void> {
+  const { clearNarrativeCache } = await import('../retrieval/answer-cache.js');
+  clearNarrativeCache();
   const document = await Document.findById(id);
   if (!document) throw new Error('Document not found');
   document.status = publish ? 'published' : 'extracted';
@@ -472,7 +475,7 @@ async function extractBuffer(buffer: Buffer, mimeType: string, name: string, ocr
   if (lower.includes('pdf')) {
     const pdf = await extractPdf(buffer);
     let text = pdf.text;
-    if (ocrEnabled && pdf.ocrRecommended) text = `${text}\n${await ocrImage(buffer)}`.trim();
+    if (ocrEnabled && pdf.ocrRecommended) text = `${text}\n${await ocrPdf(buffer)}`.trim();
     return { text, tables: [], entries: timetableEntriesFromText(text), pages: pdf.pages.length, ocrRecommended: pdf.ocrRecommended };
   }
   if (lower.includes('word') || lower.endsWith('.docx')) {

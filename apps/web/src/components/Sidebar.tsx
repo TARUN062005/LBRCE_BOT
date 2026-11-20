@@ -1,4 +1,5 @@
-import { Menu, MessageSquarePlus, Trash2 } from 'lucide-react';
+import { Menu, MessageSquarePlus, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { SUGGESTED_QUESTIONS } from '@lbrce/shared';
 
 export function Sidebar({
@@ -9,6 +10,7 @@ export function Sidebar({
   onSelect,
   onAsk,
   onDelete,
+  onRename,
 }: {
   open: boolean;
   onClose: () => void;
@@ -17,7 +19,10 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onAsk?: (question: string) => void;
   onDelete?: (id: string) => void;
+  onRename?: (id: string, title: string) => void;
 }) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
   return (
     <>
       <button type="button" className="no-print fixed left-4 top-4 z-40 rounded-lg border border-line bg-white p-2 shadow-card lg:hidden" aria-label="Open navigation" onClick={onClose}>
@@ -28,7 +33,7 @@ export function Sidebar({
         <div className="bg-brand px-4 py-5 text-white">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Mylavaram</p>
           <h1 className="text-xl font-semibold">LBRCE AI</h1>
-          <p className="mt-1 text-sm text-white/80">Official college answers, with sources.</p>
+          <p className="mt-1 text-sm text-white/80">Research assistant for the college.</p>
         </div>
         <div className="space-y-2 px-4 py-4">
           <button type="button" onClick={onNew} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-3 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark">
@@ -41,8 +46,38 @@ export function Sidebar({
             {conversations.length === 0 ? <li className="text-sm text-muted">No conversations yet.</li> : null}
             {conversations.map((conversation) => (
               <li key={conversation.id} className="flex items-center gap-1">
-                <button type="button" className="min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-sm hover:bg-canvas" onClick={() => onSelect(conversation.id)}>
-                  {conversation.title}
+                {editing === conversation.id ? (
+                  <input
+                    aria-label={`Rename ${conversation.title}`}
+                    value={title}
+                    className="min-w-0 flex-1 rounded-md border border-line px-2 py-1 text-sm"
+                    onChange={(event) => setTitle(event.target.value)}
+                    onBlur={() => {
+                      const next = title.trim();
+                      if (next && next !== conversation.title) onRename?.(conversation.id, next);
+                      setEditing(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
+                      if (event.key === 'Escape') setEditing(null);
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <button type="button" className="min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-sm hover:bg-canvas" onClick={() => onSelect(conversation.id)}>
+                    {conversation.title}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  aria-label={`Rename ${conversation.title}`}
+                  className="rounded-md p-1.5 text-muted hover:bg-canvas hover:text-ink"
+                  onClick={() => {
+                    setEditing(conversation.id);
+                    setTitle(conversation.title);
+                  }}
+                >
+                  <Pencil size={14} />
                 </button>
                 <button
                   type="button"

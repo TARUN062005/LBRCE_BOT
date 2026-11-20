@@ -10,6 +10,11 @@ export type IntentType =
   | 'admission'
   | 'fee'
   | 'placement'
+  | 'scholarship'
+  | 'attendance'
+  | 'hostel'
+  | 'contact'
+  | 'administration'
   | 'image'
   | 'notice'
   | 'summary'
@@ -40,21 +45,91 @@ const YEAR_WORDS: Record<string, number> = {
   iv: 4,
 };
 
+const IMAGE_REQUEST = /\b(photos?|photographs?|images?|pictures?|gallery|campus)\b/;
+const INSTITUTIONAL_ROLE =
+  /\b(training\s*(?:and|&)\s*placement|t\s*&\s*p|tp\s*cell|placement\s+(?:dean|officer|cell|coordinator)|dean\s+of\s+training)\b/;
+
+export function asksForInstitutionalRole(message: string): boolean {
+  return INSTITUTIONAL_ROLE.test(message.toLowerCase());
+}
+
 export function detectIntent(message: string): { type: IntentType; wantsImages: boolean } {
   const text = message.toLowerCase();
-  const wantsImages = /\b(photo|photograph|image|picture|gallery|campus)\b/.test(text);
+  const wantsImages = IMAGE_REQUEST.test(text);
+  const aboutExam = /\b(exam|examination)\b/.test(text);
+  const aboutSchedule = /\b(timetable|time table|schedule)\b/.test(text);
+  if (aboutExam && aboutSchedule) return { type: 'examination', wantsImages };
+  if (asksForInstitutionalRole(message)) return { type: 'placement', wantsImages };
+  if (/\b(hod|head of|faculty|professor|staff)\b/.test(text) && !wantsImages) return { type: 'faculty', wantsImages };
+  if (wantsImages && /\b(faculty|professor|hod|laborator(?:y|ies))\b/.test(text)) return { type: 'faculty', wantsImages };
+  if (/\b(scholarship|scholarships|fee reimbursement)\b/.test(text)) return { type: 'scholarship', wantsImages };
+  if (/\battendance\b/.test(text)) return { type: 'attendance', wantsImages };
+  if (/\bhostels?\b/.test(text)) return { type: 'hostel', wantsImages };
+  if (/\bprincipal\b/.test(text)) return { type: 'administration', wantsImages };
+  if (/\b(contact|phone|e-?mail)\b/.test(text)) return { type: 'contact', wantsImages };
+  if (/\b(announcement|notice|notification)\b/.test(text)) return { type: 'notice', wantsImages };
   if (/\b(timetable|time table|schedule for|today's class|todays class)\b/.test(text)) return { type: 'timetable', wantsImages };
-  if (/\b(hod|head of|faculty|professor|staff)\b/.test(text)) return { type: 'faculty', wantsImages };
   if (/\b(department|programme|program|courses offered|what departments)\b/.test(text)) return { type: 'department', wantsImages };
   if (/\b(academic\s+cal[ae]nd[ae]r|cal[ae]nd[ae]r|sankranthi|sankranti|pongal|holidays?)\b/.test(text)) return { type: 'calendar', wantsImages };
-  if (/\b(exam|examination|results announcement|circular)\b/.test(text)) return { type: 'examination', wantsImages };
+  if (aboutExam || /\b(results announcement|circular)\b/.test(text)) return { type: 'examination', wantsImages };
   if (/\b(admission|eapcet|icet|eligibility)\b/.test(text)) return { type: 'admission', wantsImages };
   if (/\b(fee|tuition)\b/.test(text)) return { type: 'fee', wantsImages };
-  if (/\b(placement|placed|recruiter)\b/.test(text)) return { type: 'placement', wantsImages };
-  if (/\b(notice|notification)\b/.test(text)) return { type: 'notice', wantsImages };
+  if (/\b(placement|placed|recruiter|companies visited)\b/.test(text)) return { type: 'placement', wantsImages };
   if (wantsImages) return { type: 'image', wantsImages };
   if (/\b(summarize|summary)\b/.test(text)) return { type: 'summary', wantsImages };
   return { type: 'general', wantsImages };
+}
+
+/** Intents whose index hit must contain the topic, not merely share a generic word such as "available". */
+export function topicPattern(intent: IntentType): RegExp | undefined {
+  switch (intent) {
+    case 'scholarship':
+      return /scholarship/i;
+    case 'attendance':
+      return /attendance/i;
+    case 'examination':
+      return /\bexam/i;
+    case 'hostel':
+      return /hostel/i;
+    case 'administration':
+      return /principal/i;
+    case 'contact':
+      return /contact|phone|e-?mail|mylavaram/i;
+    case 'notice':
+      return /notice|notification|announcement|circular/i;
+    default:
+      return undefined;
+  }
+}
+
+const CALENDAR_DATE = /\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b/;
+const CALENDAR_MONTH =
+  /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i;
+
+/**
+ * A calendar listing that names a newer file is not an answer when the dates inside that file are absent.
+ * Holiday questions require the holiday word. "Latest" requires dates from the newest year in the chunks.
+ */
+export function indexAnswersCalendar(message: string, chunks: { title: string; text: string }[]): boolean {
+  if (!chunks.length) return false;
+  const blob = chunks.map((chunk) => `${chunk.title}\n${chunk.text}`).join('\n');
+  if (/sankranthi|sankranti|pongal/i.test(message) && !/sankranthi|sankranti|pongal/i.test(blob)) return false;
+  const askedYears = [...message.matchAll(/\b(20\d{2})\b/g)].map((match) => match[1] ?? '');
+  if (askedYears.some((year) => year && !blob.includes(year))) return false;
+  if (!/\blatest\b|\bcurrent\b/i.test(message)) return true;
+  const starts = [...blob.matchAll(/\b(20\d{2})\s*[-–/]\s*\d{2,4}\b/g)].map((match) => Number(match[1]));
+  const newest = starts.length ? Math.max(...starts) : 0;
+  if (!newest) return false;
+  return chunks.some((chunk) => {
+    const text = `${chunk.title}\n${chunk.text}`;
+    return text.includes(String(newest)) && (CALENDAR_DATE.test(text) || CALENDAR_MONTH.test(text));
+  });
+}
+
+export function asksForStudentRoster(message: string): boolean {
+  return /\b(students?\s+list|list\s+of\s+students|all\s+students|entire\s+(class|roster)|class\s+roster|every\s+student|dump\s+the\s+roster|complete\s+.+student)\b/i.test(
+    message,
+  );
 }
 
 export function extractEntities(message: string, now = new Date()): QueryEntities {
@@ -71,7 +146,9 @@ export function extractEntities(message: string, now = new Date()): QueryEntitie
   const yearMatch = message.match(/\b(first|second|third|fourth|1st|2nd|3rd|4th|i{1,3}|iv)\s*(?:year|yr)\b/i);
   if (yearMatch?.[1]) entities.year = YEAR_WORDS[yearMatch[1].toLowerCase()];
 
-  const absoluteSemester = message.match(/\b(?:semester|sem)\s*(viii|vii|iii|ii|iv|vi|v|i|\d{1,2})\b|\b(\d{1,2})(?:st|nd|rd|th)\s+semester\b/i);
+  const absoluteSemester = message.match(
+    /\b(?:semester|sem)\s*(viii|vii|iii|ii|iv|vi|v|i|\d{1,2})\b|\b(\d{1,2})(?:st|nd|rd|th)\s+(?:semester|sem)\b/i,
+  );
   const relativeSemester = message.match(/\b(first|second|1st|2nd)\s+semester\b/i);
   if (absoluteSemester && !relativeSemester) {
     const token = (absoluteSemester[1] ?? absoluteSemester[2] ?? '').toLowerCase();
@@ -89,8 +166,9 @@ export function extractEntities(message: string, now = new Date()): QueryEntitie
     if (semester) entities.semester = semester;
   }
 
-  const section = message.match(/\b(?:section|sec)\s*([a-z])\b/i);
-  if (section?.[1]) entities.section = section[1].toUpperCase();
+  const section = message.match(/\b([a-z])\s*-\s*(?:section|sec)\b|\b(?:section|sec)\s+([a-z])\b|\b([a-z])\s+(?:section|sec)\b/i);
+  const sectionLetter = section?.[1] ?? section?.[2] ?? section?.[3];
+  if (sectionLetter) entities.section = sectionLetter.toUpperCase();
 
   const academicYear = message.match(/\b(20\d{2})\s*[-–/]\s*(\d{2,4})\b/);
   if (academicYear?.[1] && academicYear[2]) entities.academicYear = `${academicYear[1]}-${academicYear[2].slice(-2)}`;
@@ -113,7 +191,13 @@ export function documentTypeForIntent(intent: IntentType): string | undefined {
     case 'calendar':
       return 'calendar';
     case 'examination':
-      return 'circular';
+      return undefined;
+    case 'scholarship':
+    case 'attendance':
+    case 'hostel':
+    case 'contact':
+    case 'administration':
+      return undefined;
     case 'admission':
       return 'other';
     case 'fee':

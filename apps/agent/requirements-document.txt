@@ -1,0 +1,8 @@
+# Optional document stack. PyMuPDF already extracts text, tables, images, and page renders.
+# Install these only on a machine with the disk and RAM listed in DEPLOYMENT.md.
+# PaddleOCR needs PaddlePaddle. Docling overlaps PyMuPDF and is used only when page text is too short.
+paddlepaddle>=2.6
+paddleocr>=2.8
+docling>=2.0
+opencv-python-headless>=4.10
+playwright>=1.48

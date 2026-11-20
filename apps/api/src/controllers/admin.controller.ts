@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { documentMetaSchema, loginRequestSchema, timetablePatchSchema } from '@lbrce/shared';
 import { getEnv } from '../config/env.js';
 import {
+  AgentRun,
   AuditLog,
   CollegeImage,
   CollegeSource,
@@ -214,6 +215,21 @@ export async function retrievalDiagnostics(req: Request, res: Response): Promise
     timetableCount: knowledge.timetables.length,
     imageCount: knowledge.images.length,
     facultyCount: knowledge.faculty.length,
+  });
+}
+
+export async function agentRuns(_req: Request, res: Response): Promise<void> {
+  const rows = await AgentRun.find().sort({ createdAt: -1 }).limit(30).select('query intent tools provider durationMs failure createdAt').lean();
+  res.json({
+    data: rows.map((row) => ({
+      query: row.query,
+      intent: row.intent,
+      tools: row.tools,
+      provider: row.provider,
+      durationMs: row.durationMs,
+      failure: row.failure,
+      createdAt: row.createdAt,
+    })),
   });
 }
 

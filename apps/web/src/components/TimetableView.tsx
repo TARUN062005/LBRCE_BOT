@@ -10,11 +10,12 @@ export function TimetableView({
   entries,
   note,
   imageUrl,
-  sourceUrl,
-  effectiveFrom,
-  verificationStatus,
-  day,
+  academicYear,
+  department,
+  semester,
+  section,
   citations,
+  showSources = false,
 }: {
   title: string;
   view: 'day' | 'week';
@@ -23,9 +24,14 @@ export function TimetableView({
   imageUrl?: string;
   sourceUrl?: string;
   effectiveFrom?: string;
-  verificationStatus: string;
+  verificationStatus?: string;
   day?: string;
+  academicYear?: string;
+  department?: string;
+  semester?: number;
+  section?: string;
   citations: Citation[];
+  showSources?: boolean;
 }) {
   const columns = ['Period', 'Time', 'Subject', 'Faculty', 'Room'];
   const rows = entries.map((entry) => [
@@ -36,21 +42,13 @@ export function TimetableView({
     entry.room ?? '',
   ]);
 
+  const label = [department, semester ? `Semester ${semester}` : '', section ? `Section ${section}` : '', academicYear]
+    .filter(Boolean)
+    .join(' · ');
   return (
     <section className="space-y-3" aria-label={title}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold text-ink">{title}</h3>
-          <p className="text-sm text-muted">
-            {view === 'day' && day ? `${capitalize(day)} schedule` : 'Weekly schedule'} · {verificationStatus}
-            {effectiveFrom ? ` · effective ${effectiveFrom.slice(0, 10)}` : ''}
-          </p>
-        </div>
-        <button type="button" className="no-print rounded-md border border-line px-3 py-1.5 text-sm" onClick={() => window.print()}>
-          Print
-        </button>
-      </div>
-      {note ? <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-950">{note}</p> : null}
+      {label ? <h3 className="text-base font-semibold text-ink">{label}</h3> : null}
+      {note ? <p className="text-sm text-muted">{note}</p> : null}
       {entries.length ? (
         view === 'week' && new Set(entries.map((entry) => entry.dayOfWeek.toLowerCase())).size > 1 ? (
           <WeekGrid entries={entries} />
@@ -58,23 +56,12 @@ export function TimetableView({
           <DataTable columns={columns} rows={rows} />
         )
       ) : (
-        <p className="rounded-md border border-dashed border-line px-3 py-4 text-sm text-muted">
-          Period cells have not been verified for this timetable.
-        </p>
+        <p className="text-sm text-muted">The timetable image was retrieved. The period grid was not read, so no subjects or times are listed.</p>
       )}
-      {imageUrl ? (
-        <figure className="space-y-2">
-          <img src={imageUrl} alt={title} className="max-h-[480px] w-full rounded-lg border border-line object-contain" />
-          {sourceUrl && isCollegeUrl(sourceUrl) ? (
-            <figcaption className="text-sm">
-              <a className="text-brand" href={sourceUrl} target="_blank" rel="noreferrer">
-                Open the official source
-              </a>
-            </figcaption>
-          ) : null}
-        </figure>
+      {imageUrl && isCollegeUrl(imageUrl) ? (
+        <img src={imageUrl} alt={label || title} className="max-h-[70vh] w-full rounded-2xl object-contain" />
       ) : null}
-      <Citations citations={citations} />
+      {showSources && citations.length ? <Citations citations={citations} /> : null}
     </section>
   );
 }
@@ -126,8 +113,4 @@ function tone(type?: string): string {
   if (type === 'break') return 'bg-amber-50';
   if (type === 'free') return 'bg-stone-50';
   return '';
-}
-
-function capitalize(value: string): string {
-  return value.slice(0, 1).toUpperCase() + value.slice(1);
 }

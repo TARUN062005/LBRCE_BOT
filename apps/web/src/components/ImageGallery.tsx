@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Download, X } from 'lucide-react';
 import { isCollegeUrl } from './Citations';
 
 export interface GalleryImage {
@@ -11,62 +12,57 @@ export interface GalleryImage {
   topic?: string;
 }
 
-export function ImageGallery({ title, images }: { title?: string; images: GalleryImage[] }) {
+export function ImageGallery({ images }: { title?: string; images: GalleryImage[] }) {
   const [active, setActive] = useState<GalleryImage | null>(null);
   const [broken, setBroken] = useState<Record<string, boolean>>({});
-  if (!images.length) {
-    return <p className="text-sm text-muted">No official image with matching provenance was found.</p>;
-  }
+  const visible = images.filter((image) => image.url && !broken[image.id]);
+  if (!visible.length) return null;
   return (
     <div>
-      {title ? <h3 className="mb-3 text-base font-semibold">{title}</h3> : null}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        {images.map((image) => (
-          <figure key={image.id} className="overflow-hidden rounded-lg border border-line bg-white">
-            {broken[image.id] ? (
-              <div className="flex h-36 items-center p-3 text-sm text-muted">
-                This image could not be embedded.
-                {image.pageUrl && isCollegeUrl(image.pageUrl) ? (
-                  <a className="ml-1 text-brand" href={image.pageUrl} target="_blank" rel="noreferrer">
-                    Open the official page
-                  </a>
-                ) : null}
-              </div>
-            ) : (
-              <button type="button" className="block w-full" onClick={() => setActive(image)}>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {visible.map((image) => {
+          const caption = readableCaption(image);
+          return (
+            <figure key={image.id} className="group relative w-56 shrink-0">
+              <button type="button" className="block w-full overflow-hidden rounded-2xl" onClick={() => setActive(image)}>
                 <img
                   src={image.url}
-                  alt={image.alt || image.title || 'Official college image'}
+                  alt={caption || 'College photograph'}
                   loading="lazy"
-                  className="h-48 w-full object-cover"
+                  className="h-56 w-56 object-cover"
                   onError={() => setBroken((current) => ({ ...current, [image.id]: true }))}
                 />
               </button>
-            )}
-            <figcaption className="space-y-1 p-2 text-xs text-muted">
-              <div className="font-semibold text-ink">{image.title || image.alt || 'Untitled image'}</div>
-              {image.caption ? <div>{image.caption}</div> : null}
-              {image.topic ? <div className="uppercase tracking-wide">{image.topic}</div> : null}
-              {image.pageUrl && isCollegeUrl(image.pageUrl) ? (
-                <a href={image.pageUrl} target="_blank" rel="noreferrer" className="text-brand">
-                  Official page
+              {caption ? <figcaption className="mt-1 line-clamp-2 text-xs text-muted">{caption}</figcaption> : null}
+              {isCollegeUrl(image.url) && /\.(?:jpe?g|png|webp|gif)(?:$|\?)/i.test(image.url) ? (
+                <a
+                  href={`/api/media?url=${encodeURIComponent(image.url)}`}
+                  download
+                  aria-label="Download image"
+                  className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white opacity-0 transition group-hover:opacity-100"
+                >
+                  <Download size={14} />
                 </a>
               ) : null}
-            </figcaption>
-          </figure>
-        ))}
+            </figure>
+          );
+        })}
       </div>
       {active ? (
-        <dialog open className="fixed inset-0 z-50 m-auto w-[min(960px,92vw)] rounded-xl border border-line bg-white p-4 shadow-card">
-          <img src={active.url} alt={active.alt || active.title || 'Preview'} className="max-h-[70vh] w-full object-contain" />
-          <div className="mt-3 flex items-center justify-between gap-3 text-sm">
-            <p>{active.caption || active.title}</p>
-            <button type="button" className="rounded-md bg-brand px-3 py-1.5 text-white" onClick={() => setActive(null)}>
-              Close
-            </button>
-          </div>
-        </dialog>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setActive(null)}>
+          <button type="button" aria-label="Close preview" className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white" onClick={() => setActive(null)}>
+            <X size={18} />
+          </button>
+          <img src={active.url} alt={readableCaption(active) || 'Preview'} className="max-h-[86vh] max-w-[92vw] rounded-2xl object-contain" onClick={(event) => event.stopPropagation()} />
+        </div>
       ) : null}
     </div>
   );
+}
+
+function readableCaption(image: GalleryImage): string {
+  const caption = (image.caption || image.alt || '').replace(/\s+/g, ' ').trim();
+  if (!caption || caption.length > 90) return '';
+  if (/https?:|www\.|lbrce|best engineering|autonomous|naac|official college/i.test(caption)) return '';
+  return caption;
 }

@@ -14,7 +14,7 @@ describe('chat submission', () => {
       }),
     );
     render(<ChatPage onConversation={vi.fn()} />);
-    expect(screen.getByText('Ask the college assistant')).toBeInTheDocument();
+    expect(screen.getByText('Ask about LBRCE')).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Message'), 'What is LBRCE?');
     await userEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(await screen.findByText('The model provider is unavailable')).toBeInTheDocument();

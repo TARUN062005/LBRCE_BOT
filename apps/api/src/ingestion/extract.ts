@@ -239,6 +239,36 @@ export function extractSpreadsheet(buffer: Buffer): { text: string; tables: Extr
   return { text, tables, entries };
 }
 
+/**
+ * OCR a scanned PDF by rendering pages when a canvas implementation is installed.
+ * A raw PDF buffer is not an image, so tesseract is only called on rendered pages.
+ * Returns an empty string when rendering is unavailable; callers then use model vision.
+ */
+export async function ocrPdf(buffer: Buffer, maxPages = 2): Promise<string> {
+  try {
+    const unpdf = await import('unpdf');
+    const render = (unpdf as { renderPageAsImage?: (pdf: unknown, page: number, options: { scale: number; canvasImport: () => Promise<unknown> }) => Promise<Uint8Array | ArrayBuffer> })
+      .renderPageAsImage;
+    const getDocument = (unpdf as { getDocumentProxy?: (data: Uint8Array) => Promise<{ numPages: number }> }).getDocumentProxy;
+    if (!render || !getDocument) return '';
+    const canvasModule = '@napi-rs/canvas';
+    await import(canvasModule);
+    const canvasImport = () => import('@napi-rs/canvas');
+    const pdf = await getDocument(new Uint8Array(buffer));
+    const pageCount = Math.min(pdf.numPages, Math.max(1, maxPages));
+    const parts: string[] = [];
+    for (let page = 1; page <= pageCount; page += 1) {
+      const image = await render(pdf, page, { scale: 1.5, canvasImport });
+      const text = await ocrImage(Buffer.from(new Uint8Array(image)));
+      parts.push(`--- page ${page} ---\n${text.trim()}`);
+    }
+    return parts.join('\n');
+  } catch (error) {
+    logger.warn({ err: error instanceof Error ? error.message : 'pdf ocr unavailable' }, 'PDF OCR skipped');
+    return '';
+  }
+}
+
 export async function ocrImage(buffer: Buffer): Promise<string> {
   try {
     const tesseract = await import('tesseract.js');

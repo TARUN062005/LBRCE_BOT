@@ -45,8 +45,11 @@ export async function lookupStudents(numbers: string[], signal?: AbortSignal): P
     for (const line of String(row.text ?? '').split('\n')) {
       for (const number of wanted) {
         if (found.has(number) || !new RegExp(`\\b${number}\\b`).test(line.toUpperCase())) continue;
-        const name = line.split('|')[0]?.trim();
-        if (!name || name.length < 3) continue;
+        const compact = line.replace(/\s+/g, ' ').trim();
+        const at = compact.toUpperCase().indexOf(number);
+        const window = at >= 0 ? compact.slice(Math.max(0, at - 80), at + number.length + 24) : compact.slice(0, 120);
+        const name = window.split('|')[0]?.trim();
+        if (!name || name.length < 3 || name.length > 120) continue;
         found.set(number, {
           registrationNumber: number,
           name: name.replace(/^student registration list\s*/i, ''),

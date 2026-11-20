@@ -13,3 +13,7 @@ apps/web/dist/
 apps/api/dist/
 packages/shared/dist/
 .mongo/
+__pycache__/
+.venv/
+*.pyc
+apps/agent/.venv/

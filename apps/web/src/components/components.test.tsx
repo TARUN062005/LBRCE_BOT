@@ -51,9 +51,9 @@ describe('structured rendering', () => {
       />,
     );
     expect(screen.getByRole('table')).toHaveTextContent('Synthetic Subject');
-    expect(screen.getByRole('link', { name: 'Official timetable' })).toHaveAttribute('href', 'https://www.lbrce.ac.in/cse/csetimetables.php');
+    expect(screen.queryByRole('link', { name: 'Official timetable' })).not.toBeInTheDocument();
     rerender(<TimetableView title="Missing cells" view="week" verificationStatus="unverified" entries={[]} citations={[]} />);
-    expect(screen.getByText(/have not been verified/)).toBeInTheDocument();
+    expect(screen.getByText(/period grid was not read/)).toBeInTheDocument();
   });
 
   it('renders image provenance and a broken-image fallback', () => {
@@ -64,7 +64,7 @@ describe('structured rendering', () => {
       />,
     );
     expect(screen.getByText('From the homepage')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Official page' })).toHaveAttribute('href', 'https://www.lbrce.ac.in/');
+    expect(screen.getByRole('img', { name: 'From the homepage' })).toBeInTheDocument();
   });
 
   it('renders clickable citations', () => {

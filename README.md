@@ -1,27 +1,32 @@
 # LBRCE AI
 
-Retrieval-grounded assistant for Lakireddy Bali Reddy College of Engineering, Mylavaram. Answers come from pages and documents the system has actually fetched or that an administrator has uploaded. If a college fact is not in that index, the assistant says it could not be verified.
+LBRCE AI is a universal research assistant for Lakireddy Bali Reddy College of Engineering. One public chat answers natural-language questions, follow-ups, department comparisons, facilities, academic information, and official documents.
 
-The React app and the Express API run and deploy separately. Shared request and response contracts live in `packages/shared`.
+Factual claims about the college must come from college evidence: stored records, the official website, PDFs, OCR, or images. If the evidence is missing, conflicting, or not enough, the assistant says so instead of inventing the fact. Questions outside LBRCE are declined.
+
+The public chat is the product. `/admin` is a restricted console for ingestion, documents, timetable verification, retrieval checks, and agent monitoring. This is not a student portal, an ERP, an admissions or placement system, or a set of department chatbots.
+
+The React app, the Express API, and the Python research agent run separately. Shared request and response contracts live in `packages/shared`.
 
 ## Architecture
 
 ```text
-apps/web     React, Vite, TypeScript, Tailwind
-apps/api     Express, Mongoose, Gemini, crawler, jobs
+apps/web       React, Vite, TypeScript, Tailwind. One chat for every visitor.
+apps/api       Express. Sessions, history, security, retrieval, and the research entry point.
+apps/agent     FastAPI and LangGraph on 127.0.0.1:4100. Planning, official pages, PDFs, OCR, and verification.
 packages/shared   Zod contracts and department query aliases
 ```
 
 A question is handled in this order:
 
-1. Classify the intent and read department, year, semester, section, and day from the question.
-2. Query structured timetable, faculty, and image collections.
-3. Run lexical MongoDB text search, then semantic search when embeddings exist.
-4. Prefer verified, current, and recent sources. Conflicting timetable cells are reported.
-5. Ask Gemini to write a short answer only from the retrieved evidence, then drop any citation the retriever did not supply.
-6. Render text, tables, timetables, images, clarifications, or an insufficient-evidence message.
+1. Read the question and, for a follow-up, the earlier turns in the same chat.
+2. Search stored college records: text, embeddings when they exist, faculty, timetables, and public images.
+3. If those records already support the answer, Gemini writes it from that evidence. BharatCode is the fallback when Gemini fails.
+4. If the records are not enough, or the question is a follow-up or a comparison, the Python agent plans a bounded search of official LBRCE pages and documents. It can read a PDF, including a scanned page, and it checks the evidence before answering.
+5. If the agent is not running, the API uses its own bounded official-source fallback.
+6. The chat shows the answer with the official sources. A missing or conflicting fact is stated, not filled in.
 
-Gemini is not used as a source of college facts. Structured records such as a stored timetable can be shown even when the API key is missing.
+Gemini and BharatCode are not sources of college facts. A stored timetable can still be shown when no model key is available.
 
 ## Requirements
 
@@ -72,6 +77,7 @@ npm run dev
 - Web: http://localhost:5173
 - API: http://localhost:4000
 - Health: http://localhost:4000/api/health
+- Research agent, local only: `npm run dev:agent` then http://127.0.0.1:4100/health
 
 The Vite dev server proxies `/api` to the API. For a split deployment, set `VITE_API_URL` to the public API origin and `CORS_ORIGIN` to the web origin. If the browser and API are on different sites, set `COOKIE_SAMESITE=none` and serve the API over HTTPS.
 
@@ -133,9 +139,9 @@ Public:
 
 - `POST /api/chat`
 - `POST /api/chat/stream` (server-sent events: `status`, `token`, `done`, `error`)
-- `GET /api/chat/history?sessionId=`
-- `GET /api/chat/:id?sessionId=`
-- `DELETE /api/chat/:id?sessionId=`
+- `GET /api/chat/history`
+- `GET /api/chat/:id`
+- `DELETE /api/chat/:id`
 - `GET /api/search?q=`
 - `GET /api/sources/:id`
 - `GET /api/documents`
@@ -167,6 +173,9 @@ Admin, with the `lbrce_admin` cookie or `Authorization: Bearer`:
 - `PATCH /api/admin/timetables/:id`
 - `POST /api/admin/sources/refresh`
 - `GET /api/admin/retrieval?q=`
+- `GET /api/admin/agent-runs`
+
+Chat history, opening a chat, and deleting a chat use the httpOnly session cookie. A session id in the query string is ignored.
 
 Errors use `{ error: { code, message, requestId } }`.
 

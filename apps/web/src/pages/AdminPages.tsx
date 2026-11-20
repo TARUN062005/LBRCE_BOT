@@ -274,6 +274,17 @@ export function RetrievalAdmin() {
         </button>
       </form>
       <pre className="overflow-auto rounded-xl border border-line bg-white p-3 text-xs">{result}</pre>
+      <button
+        className="rounded-lg border border-line px-3 py-2 text-sm"
+        type="button"
+        onClick={() => {
+          void api('/api/admin/agent-runs')
+            .then((data) => setResult(JSON.stringify(data, null, 2)))
+            .catch((error) => setResult(error instanceof Error ? error.message : 'Failed'));
+        }}
+      >
+        Agent log
+      </button>
     </AdminShell>
   );
 }

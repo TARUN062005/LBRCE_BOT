@@ -1,5 +1,8 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { getEnv, readGeminiApiKey } from '../../config/env.js';
+import { BharatCodeProvider } from '../bharatcode/provider.js';
+import { FallbackProvider } from '../fallback-provider.js';
+import { usableCollegeUrl } from '../../retrieval/grounding.js';
 import { fetchWebEvidence } from '../web-search.js';
 import { ProviderError } from '../../utils/http-error.js';
 
@@ -257,12 +260,7 @@ export class GeminiProvider implements LlmProvider {
 }
 
 function isCollegeHost(url: string): boolean {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return host === 'lbrce.ac.in' || host.endsWith('.lbrce.ac.in');
-  } catch {
-    return false;
-  }
+  return Boolean(usableCollegeUrl(url));
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -303,7 +301,10 @@ export function mapProviderError(error: unknown): ProviderError {
 let current: LlmProvider | undefined;
 
 export function getProvider(): LlmProvider {
-  if (!current) current = new GeminiProvider();
+  if (!current) {
+    const gemini = new GeminiProvider();
+    current = new FallbackProvider([gemini, new BharatCodeProvider()], gemini);
+  }
   return current;
 }
 

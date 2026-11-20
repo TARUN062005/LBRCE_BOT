@@ -22,6 +22,10 @@ export class ApiError extends Error {
   }
 }
 
+export async function ensureBrowserSession(sessionId: string): Promise<void> {
+  await api('/api/session', { method: 'POST', body: JSON.stringify({ sessionId }) });
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getAdminToken();
   const headers = new Headers(init.headers);

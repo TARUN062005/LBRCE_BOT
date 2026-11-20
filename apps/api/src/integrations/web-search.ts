@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { assertPublicUrl } from '../security/ssrf.js';
+import { decodeCfEmail } from '../retrieval/grounding.js';
 
 export interface WebPageEvidence {
   title: string;
@@ -9,8 +10,12 @@ export interface WebPageEvidence {
 
 function isCollegePage(url: string): boolean {
   try {
-    const host = new URL(url).hostname.toLowerCase();
-    return host === 'lbrce.ac.in' || host.endsWith('.lbrce.ac.in');
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host !== 'lbrce.ac.in' && !host.endsWith('.lbrce.ac.in')) return false;
+    if (host === 'erp.lbrce.ac.in') return false;
+    if (/login/i.test(parsed.pathname)) return false;
+    return true;
   } catch {
     return false;
   }
@@ -108,6 +113,10 @@ async function readPage(url: string, signal?: AbortSignal, tokens: string[] = []
     const html = (await response.text()).slice(0, 1_500_000);
     const $ = cheerio.load(html);
     $('script, style, noscript, svg, iframe').remove();
+    $('[data-cfemail]').each((_, element) => {
+      const email = decodeCfEmail($(element).attr('data-cfemail') ?? '');
+      if (email) $(element).text(email);
+    });
     const title = $('title').first().text().replace(/\s+/g, ' ').trim().slice(0, 160);
     const matched = tokens.length
       ? $('tr')

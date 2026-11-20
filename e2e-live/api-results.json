@@ -1,0 +1,546 @@
+{
+  "health": {
+    "api": {
+      "status": 200,
+      "ms": 76
+    },
+    "agent": {
+      "status": 200,
+      "ms": 54
+    },
+    "web": {
+      "status": 200,
+      "ms": 13
+    }
+  },
+  "results": [
+    {
+      "id": "photos",
+      "message": "Can you fetch some LBRCE photos?",
+      "httpStatus": 200,
+      "elapsedMs": 27324,
+      "conversationId": "6b00928c568d8c8068546523",
+      "blocks": [
+        {
+          "type": "text",
+          "markdown": "Based on the provided official evidence, there are no image URLs or photos of Lakireddy Bali Reddy College of Engineering (LBRCE) available. **Gap in Evidence:** The current evidence contains textual details about library resources, rules, department testimonials, and links to academic portals, but it lacks any official image files or image URLs."
+        },
+        {
+          "type": "image_gallery",
+          "title": "Images from official pages",
+          "images": [
+            {
+              "url": "https://www.lbrce.ac.in/images/slider/2026-27/Brightcoe.ai.jpeg",
+              "pageUrl": "https://www.lbrce.ac.in/images/slider/2026-27/Brightcoe.ai.jpeg",
+              "title": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh",
+              "alt": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh",
+              "caption": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Prades",
+              "topic": "official"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/images/slider/2025-26/Gate_2025-26/1.jpeg",
+              "pageUrl": "https://www.lbrce.ac.in/images/slider/2025-26/Gate_2025-26/1.jpeg",
+              "title": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh",
+              "alt": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh",
+              "caption": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Prades",
+              "topic": "official"
+            }
+          ]
+        },
+        {
+          "type": "evidence",
+          "items": [
+            {
+              "sourceUrl": "https://www.lbrce.ac.in/studentcorner_pages/central_library.php",
+              "sourceType": "webpage",
+              "documentTitle": "LBRCE - Best Engineering College",
+              "excerpt": "ibrary. It has collection of e-journals and e- books like IEEE, ELSEVIER, SPRINGER NATURE, DELNET and Kinmbus open access. The digital library is available on LAN. Previous years question papers, NPTEL videos, e-books, GATE Papers and e-jou"
+            },
+            {
+              "sourceUrl": "https://www.lbrce.ac.in/studentcorner_pages/central_library.php",
+              "sourceType": "webpage",
+              "documentTitle": "LBRCE - Best Engineering College",
+              "excerpt": "ible to borrow books/materails. UG students can borrow 4 (Four) Books and PG students get a maximum 6 (Six) Books from the Circulation section for a maximum period of 14 (FOURTEEN) Days. On special request, outsiders (Students, Faculty, Res"
+            },
+            {
+              "sourceUrl": "https://www.lbrce.ac.in/studentcorner_pages/central_library.php",
+              "sourceType": "webpage",
+              "documentTitle": "LBRCE - Best Engineering College",
+              "excerpt": "RCE. OPAC allows users to search the database by Title, Author, Call Number, Accession number of the document/book NPTEL VIDEO LECTURES: S. No. Program Number of Subjects Number of Lectures 1 CSE, IT& MCA 97 2809 2 ECE, EIE& EEE 139 3837 3 "
+            },
+            {
+              "sourceUrl": "https://www.lbrce.ac.in/cse/index.php",
+              "sourceType": "webpage",
+              "documentTitle": "https://www.lbrce.ac.in/cse/index.php",
+              "excerpt": "y career. I feel Department of CSE, LBRCE prepared me for what I would face once entering the job market, allowing me to hit the ground running and have success in various roles so far.\" Mr. Karteek Pentela Senior Associate - Guardian Life "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tp-head",
+      "message": "Who is the current Head of TP Cell?",
+      "httpStatus": 200,
+      "elapsedMs": 16375,
+      "conversationId": "6b0092a7568d8c806854653a",
+      "blocks": [
+        {
+          "type": "text",
+          "markdown": "The official faculty list does not establish who currently holds “Head of the Training and Placement Cell”.\n\nA department head is not an answer to this question, and a different placement title is not treated as the same person.\n\nNo last-verified date for this role is published on the faculty list.\n\nThe same official list includes a different designation:\n\n- **Mr. SRINIVAS KONDAPABULURI** — exact designation: PLACEMENT OFFICER; department: MBA. This is not “Head of the Training and Placement Cell”.\n\n[Official faculty list](https://www.lbrce.ac.in/quicklinks_pages/faculty.php)\n\nThe placements page says a Training and Placement Officer is deputed as head of the cell. It does not print that person's name, so no one is substituted from a different designation."
+        }
+      ]
+    },
+    {
+      "id": "placement-officer",
+      "message": "Who is the Placement Officer?",
+      "httpStatus": 200,
+      "elapsedMs": 3294,
+      "conversationId": "6b0092b8568d8c806854654b",
+      "blocks": [
+        {
+          "type": "text",
+          "markdown": "**Mr. SRINIVAS KONDAPABULURI** is listed with the exact designation **PLACEMENT OFFICER**.\n\nDepartment printed on the row: MBA.\n\nThe faculty row does not print a last-verified date.\n\n[Official faculty list](https://www.lbrce.ac.in/quicklinks_pages/faculty.php)"
+        },
+        {
+          "type": "text",
+          "markdown": "**Mr. SRINIVAS KONDAPABULURI** is listed as PLACEMENT OFFICER in MBA.\n\nThe designation above is copied from the official record. It is not inferred from another title.\n\n[Official source](https://www.lbrce.ac.in/quicklinks_pages/faculty.php)"
+        },
+        {
+          "type": "table",
+          "title": "Faculty record",
+          "columns": [
+            "Field",
+            "Detail"
+          ],
+          "rows": [
+            [
+              "Name",
+              "Mr. SRINIVAS KONDAPABULURI"
+            ],
+            [
+              "Exact designation",
+              "PLACEMENT OFFICER"
+            ],
+            [
+              "Department",
+              "MBA"
+            ],
+            [
+              "Role shown",
+              "PLACEMENT OFFICER"
+            ],
+            [
+              "Date printed on the row",
+              "Not published"
+            ],
+            [
+              "Last verified by the college",
+              "Not published on this record"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tp-dean",
+      "message": "Training and Placement Dean",
+      "httpStatus": 200,
+      "elapsedMs": 7263,
+      "conversationId": "6b0092bb568d8c8068546554",
+      "blocks": [
+        {
+          "type": "text",
+          "markdown": "The official faculty list does not establish who currently holds “Training and Placement Dean”.\n\nA department head is not an answer to this question, and a different placement title is not treated as the same person.\n\nNo last-verified date for this role is published on the faculty list.\n\nThe same official list includes a different designation:\n\n- **Mr. SRINIVAS KONDAPABULURI** — exact designation: PLACEMENT OFFICER; department: MBA. This is not “Training and Placement Dean”.\n\n[Official faculty list](https://www.lbrce.ac.in/quicklinks_pages/faculty.php)\n\nThe placements page says a Training and Placement Officer is deputed as head of the cell. It does not print that person's name, so no one is substituted from a different designation."
+        }
+      ]
+    },
+    {
+      "id": "timetable",
+      "message": "Show CSE 7th semester C section timetable.",
+      "httpStatus": 200,
+      "elapsedMs": 35419,
+      "conversationId": "6b0092c2568d8c8068546561",
+      "blocks": [
+        {
+          "type": "timetable",
+          "title": "VII_SEM_C_SEC_TT_AY_2026-27.jpg",
+          "academicYear": "2026-27",
+          "department": "CSE",
+          "semester": 7,
+          "section": "C",
+          "verificationStatus": "unverified",
+          "note": "This timetable has not been marked verified by an administrator. The official timetable file was found, but period-level cells have not been extracted or verified. The source image or document is linked instead of a guessed grid. Showing 2026-27. Other indexed years for this class: 2022-23, 2023-24, 2024-25, 2025-26.",
+          "imageUrl": "https://www.lbrce.ac.in/cse/cse_timetables/2026-27/CSE_26-27_ODD_SEM/VII_SEM/VII_SEM_C_SEC_TT_AY_2026-27.jpg",
+          "entryCount": 0,
+          "citations": [
+            {
+              "id": "6ac873884a244ea84c45682e",
+              "title": "VII_SEM_C_SEC_TT_AY_2026-27.jpg",
+              "url": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "verificationStatus": "unverified",
+              "sourceType": "timetable"
+            }
+          ]
+        },
+        {
+          "type": "image_gallery",
+          "title": "Images from official pages",
+          "images": [
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/VI_SEM/VI_SEM_C_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/VI_SEM/VI_SEM_B_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/IV_SEM/IV_SEM_A_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/IV_SEM/IV_SEM_C_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/VI_SEM/VI_SEM_A_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/IV_SEM/IV_SEM_B_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/faculty/assets/images/profiles/cse/T992_MahaLakshmi.jpeg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csefaculty.php",
+              "title": "https://www.lbrce.ac.in/cse/csefaculty.php",
+              "alt": "",
+              "caption": "",
+              "topic": "department"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2025-26/CSE_25-26_ODD_SEM/III_SEM/III_SEM_E_SEC_TT_AY_2025-26.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "roster",
+      "message": "Give me the complete CSE 7th semester C-section student list and timetable.",
+      "httpStatus": 200,
+      "elapsedMs": 24157,
+      "conversationId": "6b0092e6568d8c806854657a",
+      "blocks": [
+        {
+          "type": "text",
+          "markdown": "I cannot provide a complete class roster, including names and registration numbers, through this public chat. The timetable below is separate from that list."
+        },
+        {
+          "type": "timetable",
+          "title": "VII_SEM_C_SEC_TT_AY_2026-27.jpg",
+          "academicYear": "2026-27",
+          "department": "CSE",
+          "semester": 7,
+          "section": "C",
+          "verificationStatus": "unverified",
+          "note": "This timetable has not been marked verified by an administrator. The official timetable file was found, but period-level cells have not been extracted or verified. The source image or document is linked instead of a guessed grid. Showing 2026-27. Other indexed years for this class: 2022-23, 2023-24, 2024-25, 2025-26.",
+          "imageUrl": "https://www.lbrce.ac.in/cse/cse_timetables/2026-27/CSE_26-27_ODD_SEM/VII_SEM/VII_SEM_C_SEC_TT_AY_2026-27.jpg",
+          "entryCount": 0,
+          "citations": [
+            {
+              "id": "6ac873884a244ea84c45682e",
+              "title": "VII_SEM_C_SEC_TT_AY_2026-27.jpg",
+              "url": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "verificationStatus": "unverified",
+              "sourceType": "timetable"
+            }
+          ]
+        },
+        {
+          "type": "image_gallery",
+          "title": "Images from official pages",
+          "images": [
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/IV_SEM/IV_SEM_A_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/IV_SEM/IV_SEM_B_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/VI_SEM/VI_SEM_C_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/IV_SEM/IV_SEM_C_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/VI_SEM/VI_SEM_A_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2023-24/CSE_23-24_EVEN_SEM/VI_SEM/VI_SEM_B_SEC_TIMETABLE_AY_2023-24.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2022-23/CSE_22-23_EVEN_SEM/IV_SEM/IV_SEM_CSE_A_SEC_TIMETABLE_AY_2022-23.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/cse/cse_timetables/2025-26/CSE_25-26_ODD_SEM/VII_SEM/VII_SEM_C_SEC_TT_AY_2025-26.jpg",
+              "pageUrl": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "title": "https://www.lbrce.ac.in/cse/csetimetables.php",
+              "alt": "",
+              "caption": "",
+              "topic": "timetable"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "message": "Compare CSE and ECE departments in table format.",
+      "httpStatus": 200,
+      "elapsedMs": 96066,
+      "conversationId": "6b0092fe568d8c806854658f",
+      "blocks": [
+        {
+          "type": "text",
+          "markdown": "The current official LBRCE sources do not establish that answer. I will not guess it."
+        }
+      ]
+    },
+    {
+      "id": "campus",
+      "message": "Show me LBRCE campus photographs and explain the facilities.",
+      "httpStatus": 200,
+      "elapsedMs": 66621,
+      "conversationId": "6b00935e568d8c80685465bc",
+      "blocks": [
+        {
+          "type": "text",
+          "markdown": "### Campus Photographs **Gap in Evidence:** The provided evidence does not contain any official image URLs or campus photographs. Therefore, campus photographs cannot be displayed. --- ### Campus Facilities Based on the available official records, the campus facilities at Lakireddy Bali Reddy College of Engineering (LBRCE) include: #### 1. Central Library & Digital Infrastructure * **Physical Layout:** Spans a total area of 21,792 sq. ft. across three floors (Ground, First, and Second floors). * **Ground Floor:** Houses the Book Circulation Section, Newspapers, Magazines, and Reprography/Photocopy services. * **First Floor:** Holds back volumes of scientific and technical periodicals. * **Print & Media Collection:** Contains 65,970 volumes with 13,216 titles, approximately 3,585 back volumes, 79 national print journals, and 25 magazines. Includes a reference section stocked with handbooks and general knowledge resources. * **Digital Library & Intranet Access:** Accessible via LAN/Intranet, providing students and faculty with GATE papers, previous years' question papers, NPTEL video lectures, e-books, and e-journal articles. * **E-Resources & Databases:** Features over 6,692 e-journ"
+        },
+        {
+          "type": "image_gallery",
+          "title": "Images from official pages",
+          "images": [
+            {
+              "url": "https://www.lbrce.ac.in/images/slider/2026-27/Brightcoe.ai.jpeg",
+              "pageUrl": "https://www.lbrce.ac.in/images/slider/2026-27/Brightcoe.ai.jpeg",
+              "title": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh",
+              "alt": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh",
+              "caption": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Prades",
+              "topic": "official"
+            },
+            {
+              "url": "https://www.lbrce.ac.in/images/slider/2025-26/Gate_2025-26/1.jpeg",
+              "pageUrl": "https://www.lbrce.ac.in/images/slider/2025-26/Gate_2025-26/1.jpeg",
+              "title": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh",
+              "alt": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh",
+              "caption": "Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Pradesh Lakireddy Bali Reddy College of Engineering (LBRCE) | Autonomous | NAAC A | Andhra Prades",
+              "topic": "official"
+            }
+          ]
+        },
+        {
+          "type": "evidence",
+          "items": [
+            {
+              "sourceUrl": "https://www.lbrce.ac.in/studentcorner_pages/central_library.php",
+              "sourceType": "webpage",
+              "documentTitle": "LBRCE - Best Engineering College",
+              "excerpt": "ibrary. It has collection of e-journals and e- books like IEEE, ELSEVIER, SPRINGER NATURE, DELNET and Kinmbus open access. The digital library is available on LAN. Previous years question papers, NPTEL videos, e-books, GATE Papers and e-jou"
+            },
+            {
+              "sourceUrl": "https://www.lbrce.ac.in/it/index.php",
+              "sourceType": "webpage",
+              "documentTitle": "https://www.lbrce.ac.in/it/index.php",
+              "excerpt": "4 One-Week National Level Faculty Development Program on “Generative AI for Data visualization” Dr. S. Naganjaneyulu got sanctioned a grant of Rs. 2,44,656/- Lakhs from UGC under Travel Grant to USA AICTE has sanctioned a Grant-in-Aid MODRO"
+            },
+            {
+              "sourceUrl": "https://www.lbrce.ac.in/cse/index.php",
+              "sourceType": "webpage",
+              "documentTitle": "https://www.lbrce.ac.in/cse/index.php",
+              "excerpt": "ACCREDITED BY NBA UNDER TIER - I => Valid Up to A.Y.: 2027 - 28 Department of COMPUTER SCIENCE AND ENGINEERING CSE Home About About Dept About HOD Board of Studies (BOS) Faculty Regular Faculty Adjunct Faculty Non-Teaching Staff OBE POs, PE"
+            },
+            {
+              "sourceUrl": "https://www.lbrce.ac.in/studentcorner_pages/central_library.php",
+              "sourceType": "webpage",
+              "documentTitle": "LBRCE - Best Engineering College",
+              "excerpt": "LBRCE One Best Book is equal to 100 Good Friends But One Good Friend is equal to a Library - Dr. A.P.J. Abdul Kalam Dr. T. Sambasivarao Librarian Ph. No.: 08659-222933, Extn.: 607 Mobile: +91 9848341559 E-mail: [email protected] or [email p"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "faculty-followup",
+      "message": "What about its faculty?",
+      "httpStatus": 200,
+      "elapsedMs": 6127,
+      "conversationId": "6b00935e568d8c80685465bc",
+      "blocks": [
+        {
+          "type": "table",
+          "title": "Faculty records retrieved from indexed sources",
+          "columns": [
+            "Name",
+            "Designation",
+            "Department",
+            "Verification"
+          ],
+          "rows": [
+            [
+              "LLR Boys Hostel",
+              "",
+              "CE",
+              "unverified"
+            ],
+            [
+              "LNG (Girls) Hostel-Common",
+              "",
+              "CE",
+              "unverified"
+            ],
+            [
+              "LNG (Girls) Hostel-Attached",
+              "",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Dr.KOLLIPARA VENKATA RAMANA",
+              "Associate Professor & HOD",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Dr.RAMAKRISHNA. V",
+              "Professor",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Dr.JAMPANI VENKATESWARARAO",
+              "Professor",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Mr.RANGAIAH. J",
+              "Associate Professor",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Mr.EESHWAR RAM. J",
+              "Sr.Assistant Professor",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Mr.RAMAKRISHNA. B",
+              "Sr.Assistant Professor",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Mr.NARASIMHA RAO. B",
+              "Sr.Assistant Professor",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Mr.KONA HARISH KUMAR",
+              "Sr.Assistant Professor",
+              "CE",
+              "unverified"
+            ],
+            [
+              "Dr.CHAKALI RAJAMALLU",
+              "Sr.Assistant Professor",
+              "CE",
+              "unverified"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "markdown": "Retrieved excerpts are shown below. A generated summary was not produced.\n\n1. **LBRCE - Best Engineering College**\n\n> ial Intelligence & Data Science Department of Civil Engineering Department of Computer Science & Engineering Department of CSE (AI & ML) Department of Electronics & Communication Engineering Department of Electrical & Electronics Engineering Department of Information Technology Department of Mechanical Engineering Department of Master of Business Administration (MBA) Department of Freshman Engineering Department (FED) Academic Year Wise Faculty List A.Y.: 2025 - 26 A.Y.: 2024 - 25 A.Y.: 2023 - 2\n\n2. **LBRCE - Best Engineering College**\n\n> NDU Sr.Assistant Professor 01-06-2017 1-3549296392 MECH Mrs.KAMALA PRIYA BYSANI Sr.Assistant Professor 17-07-2017 1-4561433354 MECH Mr.SEELAM SRINIVASA REDDY Sr.Assistant Professor 03-12-2018 1-7453061480 MECH Dr.AMMISETTI DHANUNJAY KUMAR Sr.Assistant Professor 06-06-2019 1-9312931020 MECH Mr.KOLAGOTLA VENKATESWARAREDDY Sr.Assistant Professor 28-08-2020 1-9312931116 MECH Mr.KOLAHALAM SAIBABU Assistant Professor 28-08-2020 1-9312931292 MECH Mr.SEELAM UMA MAHESWARA REDDY Assistant Professor 28-08-\n\n3. **LBRCE - Best Engineering Colle"
+        }
+      ]
+    },
+    {
+      "id": "download",
+      "url": "https://www.lbrce.ac.in/images/slider/2026-27/Brightcoe.ai.jpeg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg",
+      "disposition": "attachment; filename=\"Brightcoe.ai.jpeg\"",
+      "bytes": 139612,
+      "elapsedMs": 1835
+    }
+  ]
+}

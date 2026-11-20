@@ -106,6 +106,21 @@ export const answerBlockSchema = z.discriminatedUnion('type', [
     message: z.string(),
     suggestions: z.array(z.string()),
   }),
+  z.object({
+    type: z.literal('evidence'),
+    title: z.string().optional(),
+    items: z.array(
+      z.object({
+        sourceUrl: z.string(),
+        sourceType: z.enum(['webpage', 'pdf', 'image', 'screenshot']),
+        documentTitle: z.string().optional(),
+        pageNumber: z.number().int().positive().optional(),
+        excerpt: z.string(),
+        capturedAt: z.string(),
+        verificationStatus: z.enum(['verified', 'partial', 'unverified']),
+      }),
+    ),
+  }),
 ]);
 
 export type AnswerBlock = z.infer<typeof answerBlockSchema>;

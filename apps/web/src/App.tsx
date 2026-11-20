@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { api } from './api/client';
+import { api, ensureBrowserSession } from './api/client';
 import { Sidebar } from './components/Sidebar';
 import { getSessionId } from './lib/session';
 import { AdminHome, DocumentsAdmin, IngestionAdmin, LoginPage, RetrievalAdmin, TimetableAdmin } from './pages/AdminPages';
@@ -29,13 +29,23 @@ function StudentShell() {
   const [draftSeed, setDraftSeed] = useState('');
 
   function refresh() {
-    void api<{ data: { id: string; title: string }[] }>(`/api/chat/history?sessionId=${getSessionId()}`)
+    void api<{ data: { id: string; title: string }[] }>('/api/chat/history')
       .then((result) => setConversations(result.data))
       .catch(() => setConversations([]));
   }
 
   useEffect(() => {
-    refresh();
+    let cancelled = false;
+    void ensureBrowserSession(getSessionId())
+      .then(() => {
+        if (!cancelled) refresh();
+      })
+      .catch(() => {
+        if (!cancelled) setConversations([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [conversationId]);
 
   function openFreshChat(draft = '') {
@@ -61,8 +71,13 @@ function StudentShell() {
           setOpen(false);
           navigate('/');
         }}
+        onRename={(id, title) => {
+          void api(`/api/chat/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }).then(() => {
+            setConversations((current) => current.map((conversation) => (conversation.id === id ? { ...conversation, title } : conversation)));
+          });
+        }}
         onDelete={(id) => {
-          void api(`/api/chat/${id}?sessionId=${getSessionId()}`, { method: 'DELETE' })
+          void api(`/api/chat/${id}`, { method: 'DELETE' })
             .then(() => {
               setConversations((current) => current.filter((conversation) => conversation.id !== id));
               if (conversationId === id) openFreshChat();

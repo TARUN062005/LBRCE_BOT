@@ -4,7 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import multer from 'multer';
 import mongoose from 'mongoose';
-import { getEnv, isAllowedOrigin } from './config/env.js';
+import { getEnv, isAllowedOrigin, readBharatcodeApiKey, readGeminiApiKey } from './config/env.js';
 import {
   adminDocument,
   adminDocuments,
@@ -19,6 +19,7 @@ import {
   publishDocument,
   reprocess,
   retrievalDiagnostics,
+  agentRuns,
   retryJob,
   runIngestion,
   uploadDocument,
@@ -28,11 +29,14 @@ import {
   chatById,
   chatHistory,
   documentById,
+  downloadOfficialImage,
   listDocuments,
   listTimetables,
+  openSession,
   postChat,
   postFeedback,
   removeChat,
+  renameChat,
   search,
   searchImages,
   searchTimetables,
@@ -51,8 +55,6 @@ import {
   requireOrigin,
   uploadLimiter,
 } from './middleware/common.js';
-import { getProvider } from './integrations/gemini/provider.js';
-
 export function createApp() {
   const env = getEnv();
   const app = express();
@@ -85,16 +87,19 @@ export function createApp() {
     res.status(mongo === 'connected' ? 200 : 503).json({
       status: mongo === 'connected' ? 'ok' : 'degraded',
       mongo,
-      gemini: getProvider().isConfigured() ? 'configured' : 'missing',
+      gemini: readGeminiApiKey() ? 'configured' : 'missing',
+      bharatcode: readBharatcodeApiKey() ? 'configured' : 'missing',
       vectorSearch: env.VECTOR_SEARCH_INDEX ? 'atlas' : 'local-cosine',
       ocr: env.OCR_ENABLED,
     });
   });
 
+  app.post('/api/session', asyncHandler(openSession));
   app.post('/api/chat', chatLimiter, asyncHandler(postChat));
   app.post('/api/chat/stream', chatLimiter, asyncHandler(streamChat));
   app.get('/api/chat/history', asyncHandler(chatHistory));
   app.get('/api/chat/:id', asyncHandler(chatById));
+  app.patch('/api/chat/:id', asyncHandler(renameChat));
   app.delete('/api/chat/:id', asyncHandler(removeChat));
 
   app.get('/api/search', asyncHandler(search));
@@ -105,6 +110,8 @@ export function createApp() {
   app.get('/api/timetables', asyncHandler(listTimetables));
   app.get('/api/timetables/:id', asyncHandler(timetableById));
   app.get('/api/images/search', asyncHandler(searchImages));
+  app.get('/api/media', asyncHandler(downloadOfficialImage));
+  app.get('/api/media/:name', asyncHandler(downloadOfficialImage));
   app.post('/api/feedback', asyncHandler(postFeedback));
 
   app.post('/api/admin/auth/login', loginLimiter, asyncHandler(adminLogin));
@@ -125,6 +132,7 @@ export function createApp() {
   app.patch('/api/admin/timetables/:id', requireAdmin, asyncHandler(patchTimetable));
   app.post('/api/admin/sources/refresh', requireAdmin, ingestLimiter, asyncHandler(runIngestion));
   app.get('/api/admin/retrieval', requireAdmin, asyncHandler(retrievalDiagnostics));
+  app.get('/api/admin/agent-runs', requireAdmin, asyncHandler(agentRuns));
 
   app.use(errorHandler);
   return app;

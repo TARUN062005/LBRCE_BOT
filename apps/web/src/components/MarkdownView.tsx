@@ -18,12 +18,21 @@ const components: Components = {
   },
 };
 
-export function MarkdownView({ markdown }: { markdown: string }) {
+export function MarkdownView({ markdown, showSources = false }: { markdown: string; showSources?: boolean }) {
   return (
     <div className="prose-chat space-y-3 text-[15px] leading-7 text-ink">
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={components}>
-        {markdown}
+        {presentMarkdown(markdown, showSources)}
       </ReactMarkdown>
     </div>
   );
+}
+
+export function presentMarkdown(markdown: string, showSources: boolean): string {
+  if (showSources) return markdown;
+  return markdown
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '$1')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 }
